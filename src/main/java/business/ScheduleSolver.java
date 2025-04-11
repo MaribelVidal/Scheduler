@@ -6,6 +6,7 @@ import org.chocosolver.solver.constraints.Constraint;
 import org.chocosolver.solver.variables.BoolVar;
 import org.chocosolver.solver.variables.IntVar;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -35,6 +36,8 @@ public class ScheduleSolver {
 
     private int numberOfLessons; //Lesson es el conjunto de las 5 variables principales
     private Map<Integer, List<List<Integer>>> solvedSchedules;
+
+    private List<Lesson> lessons;
 
    public ScheduleSolver(List<Teacher> teacherCollection, List<StudentGroup> groupOfStudentCollection,
                          List<Subject> subjectCollection, List<Classroom> classroomCollection, List<TimePeriod> timePeriodCollection){
@@ -67,6 +70,11 @@ public class ScheduleSolver {
       numberOfTimePeriods = timePeriodCollection.size();
 
       numberOfLessons = numberOfStudentesGroup * numberOfTimePeriods;
+
+      lessons = new ArrayList<>();
+
+
+
    }
 
 
@@ -105,6 +113,8 @@ public class ScheduleSolver {
 
        for (int i = 0; i < numberOfLessons; i++) {
            for (int j = i+1 ; j < numberOfLessons; j++) {
+
+               /*
                BoolVar sameTeacher = model.boolVar("sameTeacher" + i + "_" + j);
                model.arithm(teacherCollection[i] , "=" , teacherCollection[j]).reifyWith(sameTeacher);
                BoolVar sameTimePeriod = model.boolVar("sameTimePeriod" + i + "_" + j);
@@ -112,13 +122,55 @@ public class ScheduleSolver {
                BoolVar sameClassroom = model.boolVar("sameClassroom" + i + "_" + j);
                model.arithm(classroomCollection[i] , "=" , classroomCollection[j]).reifyWith(sameClassroom);
 
-               model.ifThen(model.and(sameTeacher , sameTimePeriod) , model.arithm(sameClassroom, "<=", 1));
+               model.ifThen(model.and(sameTeacher , sameTimePeriod) , model.arithm(sameClassroom, "<=", 1)); */
+
+               Lesson lesson1 = lessons.get(i);
+               Lesson lesson2 = lessons.get(j);
+               model.ifThen (
+                       model.and(
+                               model.arithm(lesson1.getTeacher(), "=" , lesson2.getTeacher()),
+                               model.arithm(lesson1.getTimePeriod(), "=" , lesson2.getTimePeriod())
+                               ),
+                       model.arithm(lesson1.getClassroom(), "=", lesson2.getClassroom()));
+
            }
 
 
        }
 
    }
+
+   //El traductor sólo es para debug
+
+    public void printMatrix (){
+       String[][] schedule = new String[numberOfTeachers][numberOfTimePeriods];
+
+       for (Lesson l:lessons){
+           int teacher = l.getTeacher().getValue();
+           int studentGroup = l.getStudentGroup().getValue();
+           int subject = l.getSubject().getValue();
+           int classroom = l.getClassroom().getValue();
+           int timePeriod = l.getTimePeriod().getValue();
+
+           String info = String.format("t%d - sg%d - s%d - c%d - tp%d" , teacher, studentGroup, subject, classroom, timePeriod);
+
+           schedule[teacher][timePeriod] = info;
+       }
+        for (int i = 0; i < numberOfTeachers; i++) {
+
+            System.out.println("teacher " + i);
+
+            for (int j = 0; j < numberOfTimePeriods; j++) {
+
+                System.out.println(schedule[i][j]);
+
+            }
+
+            System.out.println();
+        }
+
+    }
+
    // convierte la solución encontrada del csp al formato solvedSchedule
    private void transform(){}
 

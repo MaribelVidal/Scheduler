@@ -26,7 +26,51 @@ public class Teacher extends Entity {
     }
 
 
+    public String getEmail() {
+        return email;
+    }
 
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
+    public String getPhone() {
+        return phone;
+    }
 
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public Department getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(Department department) {
+        this.department = department;
+    }
+
+    public List<Subject> getPossibleSubjects() {
+        return possibleSubjects;
+    }
+
+    public void setPossibleSubjects(List<Subject> possibleSubjects) {
+        this.possibleSubjects = possibleSubjects;
+    }
+
+    public List<String> getRole() {
+        return role;
+    }
+
+    public void setRole(List<String> role) {
+        this.role = role;
+    }
+
+    public int getHoursWork() {
+        return hoursWork;
+    }
+
+    public void setHoursWork(int hoursWork) {
+        this.hoursWork = hoursWork;
+    }
 }

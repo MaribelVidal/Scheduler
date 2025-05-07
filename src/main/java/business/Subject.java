@@ -4,26 +4,22 @@ import java.util.List;
 
 public class Subject extends Entity{
 
-    //private String name;
-    //private String abbreviation;
-    private Department department;
 
-
+    private String department;
     private int weeklyAssignedHours;
-    private String course; // ejemplo 4ESO
-
+    private String course;// ejemplo 4ESO
     private Classroom assignedClassroom;
 
 
-    public Subject(int id, String name, String abbreviation) {
+    public Subject(String id, String name, String abbreviation) {
         super(id, name, abbreviation);
     }
 
-    public Department getDepartment() {
+    public String getDepartment() {
         return department;
     }
 
-    public void setDepartment(Department department) {
+    public void setDepartment(String department) {
         this.department = department;
     }
 

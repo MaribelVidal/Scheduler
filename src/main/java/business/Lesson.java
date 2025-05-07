@@ -3,6 +3,7 @@ package business;
 import org.chocosolver.solver.variables.IntVar;
 
 public class Lesson {
+
     private IntVar teacher;
     private IntVar studentGroup;
     private IntVar classroom;

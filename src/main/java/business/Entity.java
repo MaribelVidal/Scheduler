@@ -2,12 +2,12 @@ package business;
 
 //Clase para que hereden el resto de clases (Teacher, student...)
 public class Entity {
-    private int id;
+    private String id;
     private String name;
     private String abbreviation;
     private Schedule schedule;
 
-    public Entity(int id, String name, String abbreviation){
+    public Entity(String id, String name, String abbreviation){
         this.id = id;
         this.name = name;
         this.abbreviation = abbreviation;
@@ -18,32 +18,28 @@ public class Entity {
 
 
 
-    public int getId() {
+    public String getId() {
         return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getName() {
         return name;
     }
 
-    public String getAbbreviation() {
-        return abbreviation;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
     public void setName(String name) {
         this.name = name;
     }
 
-    public void setAbbreviation(String abbreviation) {
-        this.abbreviation = abbreviation;
+    public String getAbbreviation() {
+        return abbreviation;
     }
 
-    public void setSchedule(Schedule schedule) {
-        this.schedule = schedule;
+    public void setAbbreviation(String abbreviation) {
+        this.abbreviation = abbreviation;
     }
 
 
@@ -51,9 +47,12 @@ public class Entity {
         return schedule.getSchedule();
     }*/
 
-
     public Schedule getSchedule() {
     return schedule;
 }
+
+    public void setSchedule(Schedule schedule) {
+        this.schedule = schedule;
+    }
 
 }

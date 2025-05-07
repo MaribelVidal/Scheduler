@@ -9,6 +9,7 @@ import org.chocosolver.solver.variables.IntVar;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 public class ScheduleSolver {
 
@@ -27,6 +28,11 @@ public class ScheduleSolver {
     private int numberOfClassrooms;
     private int numberOfTimePeriods;
 
+    private Map<Integer, Teacher> indexToTeacherMap;
+    private Map<Integer, StudentGroup> indexToStudentGroupMap;
+    private Map<Integer, Subject> indexToSubjectMap;
+    private Map<Integer, Classroom> indexToClassroomMap;
+    private Map<Integer, TimePeriod> indexToTimePeriodMap;
 
     private List<Teacher> teacherCollection;
     private List<StudentGroup> groupOfStudentsCollection;
@@ -35,8 +41,11 @@ public class ScheduleSolver {
     private List<TimePeriod> timePeriodCollection;
 
     private int numberOfLessons; //Lesson es el conjunto de las 5 variables principales
-    private Map<Integer, List<List<Integer>>> solvedSchedules;
-
+    private Map<Integer, List<List<Integer>>> solvedSchedulesTeacher; //Key=teacherId, valor=List<Lesson> donde cada Lesson es una lista de sus componentes.
+    private Map<Integer, List<Integer>> solvedSchedulesSubject; //Key=subjectId, valor=List<LessonIds>
+    private Map<Integer, List<Integer>> solvedSchedulesStudentGroup; //Key=studentGroupId, valor=List<LessonIds>
+    private Map<Integer, List<Integer>> solvedSchedulesClassroom; //Key=classroomId, valor=List<LessonIds>
+    private Map<Integer, List<List<Integer>>> solvedSchedulesTimePeriod; //Key=timePeriodId, valor=List<LessonIds>
     private List<Lesson> lessons;
 
    public ScheduleSolver(List<Teacher> teacherCollection, List<StudentGroup> groupOfStudentCollection,
@@ -70,15 +79,51 @@ public class ScheduleSolver {
       numberOfTimePeriods = timePeriodCollection.size();
 
       numberOfLessons = numberOfStudentesGroup * numberOfTimePeriods;
-
+       System.out.println("numberOfLessons: " + numberOfLessons);
       lessons = new ArrayList<>();
+      solvedSchedulesTeacher = new HashMap<>();
 
+       // Crear mapeos de índice a entidad
+       indexToTeacherMap = new HashMap<>();
+       for (int i = 0; i < teacherCollection.size(); i++) {
+           indexToTeacherMap.put(i, teacherCollection.get(i));
+       }
 
+       // Crear mapeos similares para los otros tipos de entidades
+       indexToStudentGroupMap = new HashMap<>();
+       for (int i = 0; i < groupOfStudentsCollection.size(); i++) {
+           indexToStudentGroupMap.put(i, groupOfStudentsCollection.get(i));
+       }
+
+       // Y así sucesivamente para las otras colecciones
+       indexToSubjectMap = new HashMap<>();
+       for (int i = 0; i < subjectCollection.size(); i++) {
+           indexToSubjectMap.put(i, subjectCollection.get(i));
+       }
+       indexToClassroomMap = new HashMap<>();
+       for (int i = 0; i < classroomCollection.size(); i++) {
+           indexToClassroomMap.put(i, classroomCollection.get(i));
+       }
+       indexToTimePeriodMap = new HashMap<>();
+       for (int i = 0; i < timePeriodCollection.size(); i++) {
+           indexToTimePeriodMap.put(i, timePeriodCollection.get(i));
+       }
 
    }
 
 
    private void defineVariables(){
+         // Definimos las variables de decisión
+         for (int i = 0; i < numberOfLessons; i++) {
+              // Definimos las variables para cada lección
+              IntVar teacher = model.intVar("teacher" + i, 0, numberOfTeachers - 1);
+              IntVar studentGroup = model.intVar("studentGroup" + i, 0, numberOfStudentesGroup - 1);
+              IntVar subject = model.intVar("subject" + i, 0, numberOfSubjects - 1);
+              IntVar classroom = model.intVar("classroom" + i, 0, numberOfClassrooms - 1);
+              IntVar timePeriod = model.intVar("timePeriod" + i, 0, numberOfTimePeriods - 1);
+
+              lessons.add(new Lesson(teacher, studentGroup, subject, classroom, timePeriod));
+         }
 
    }
 
@@ -146,15 +191,27 @@ public class ScheduleSolver {
        String[][] schedule = new String[numberOfTeachers][numberOfTimePeriods];
 
        for (Lesson l:lessons){
-           int teacher = l.getTeacher().getValue();
-           int studentGroup = l.getStudentGroup().getValue();
-           int subject = l.getSubject().getValue();
-           int classroom = l.getClassroom().getValue();
-           int timePeriod = l.getTimePeriod().getValue();
 
-           String info = String.format("t%d - sg%d - s%d - c%d - tp%d" , teacher, studentGroup, subject, classroom, timePeriod);
+               int teacherIndex = l.getTeacher().getValue();
+               int studentGroupIndex = l.getStudentGroup().getValue();
+               int subjectIndex = l.getSubject().getValue();
+               int classroomIndex = l.getClassroom().getValue();
+               int timePeriodIndex = l.getTimePeriod().getValue();
 
-           schedule[teacher][timePeriod] = info;
+               Teacher teacher = indexToTeacherMap.get(teacherIndex);
+               StudentGroup studentGroup = indexToStudentGroupMap.get(studentGroupIndex);
+               Subject subject = indexToSubjectMap.get(subjectIndex);
+               Classroom classroom = indexToClassroomMap.get(classroomIndex);
+               TimePeriod timePeriod = indexToTimePeriodMap.get(timePeriodIndex);
+
+               String info = String.format("%s - %s - %s - %s - %s",
+                       teacher.getId(),
+                       studentGroup.getId(),
+                       subject.getId(),
+                       classroom.getId(),
+                       timePeriod.getId());
+
+               schedule[teacherIndex][timePeriodIndex] = info;
        }
         for (int i = 0; i < numberOfTeachers; i++) {
 
@@ -171,18 +228,88 @@ public class ScheduleSolver {
 
     }
 
-   // convierte la solución encontrada del csp al formato solvedSchedule
-   private void transform(){}
 
+
+   // convierte la solución encontrada del csp al formato solvedSchedule
+   // Convierte la solución encontrada del CSP al formato solvedSchedule
+   private void transform() {
+       // Inicializamos el mapa para almacenar los horarios resueltos
+       solvedSchedulesTeacher = new HashMap<>();
+
+       // Para cada lección que se ha resuelto en el solver
+       for (Lesson lesson : lessons) {
+           int teacherId = lesson.getTeacher().getValue();
+           int timePeriodId = lesson.getTimePeriod().getValue();
+           int subjectId = lesson.getSubject().getValue();
+           int studentGroupId = lesson.getStudentGroup().getValue();
+           int classroomId = lesson.getClassroom().getValue();
+
+           // Creamos una lista para almacenar los detalles de la lección
+           List<Integer> lessonDetails = new ArrayList<>();
+           lessonDetails.add(subjectId);
+           lessonDetails.add(studentGroupId);
+           lessonDetails.add(classroomId);
+           lessonDetails.add(timePeriodId);
+
+           // Si el profesor no tiene un horario en el mapa, creamos uno nuevo
+           if (!solvedSchedulesTeacher.containsKey(teacherId)) {
+               // Inicializamos una lista para cada profesor
+               solvedSchedulesTeacher.put(teacherId, new ArrayList<>());
+           }
+
+           // Añadimos los detalles de la lección a la lista del profesor
+           solvedSchedulesTeacher.get(teacherId).add(lessonDetails);
+       }
+
+       System.out.println("Transformación completada. Número de profesores con horario: " + solvedSchedulesTeacher.size());
+
+       // Si necesitas una matriz real [profesor][período]
+       // puedes crearla así después de llenar el mapa
+       createScheduleMatrix();
+   }
+
+    // Método para crear una matriz explícita de profesores x períodos
+    private void createScheduleMatrix() {
+        // Usaremos Object[][] para almacenar listas de detalles de lecciones
+        Object[][] matrix = new Object[numberOfTeachers][numberOfTimePeriods];
+
+        // Inicializamos la matriz con listas vacías
+        for (int i = 0; i < numberOfTeachers; i++) {
+            for (int j = 0; j < numberOfTimePeriods; j++) {
+                matrix[i][j] = new ArrayList<List<Integer>>();
+            }
+        }
+
+        // Llenamos la matriz con las lecciones organizadas
+        for (Lesson lesson : lessons) {
+            int teacherId = lesson.getTeacher().getValue();
+            int timePeriodId = lesson.getTimePeriod().getValue();
+
+            // Creamos la lista de detalles
+            List<Integer> details = new ArrayList<>();
+            details.add(lesson.getSubject().getValue());
+            details.add(lesson.getStudentGroup().getValue());
+            details.add(lesson.getClassroom().getValue());
+
+            // Añadimos a la posición correspondiente en la matriz
+            ((List<List<Integer>>) matrix[teacherId][timePeriodId]).add(details);
+        }
+
+        // Ahora matrix[i][j] contiene todas las lecciones del profesor i en el período j
+        // Puedes acceder o guardar esta matriz según necesites
+        schedule = new IntVar[numberOfTeachers][numberOfTimePeriods];
+        // Nota: IntVar no es el tipo adecuado para schedule si quieres guardar lecciones resueltas
+        // Deberías cambiar el tipo según lo que necesites almacenar
+    }
     // Constructor para inicializar los horarios de los profesores, grupos de estudiantes, estudiantes y aulas
 
-    public Map<Integer, List<List<Integer>>> getSolvedSchedules() {
+   /* public Map<Integer, List<Integer>> getSolvedSchedules() {
         return solvedSchedules;
     }
 
-    public List<List<Integer>> getSchedules(int id) {
+    public List<Integer> getSchedules(int id) {
         return solvedSchedules.get(id);
-    }
+    } */
 
 
 /*

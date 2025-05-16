@@ -48,6 +48,12 @@ public class ScheduleSolver {
     private Map<Integer, List<List<Integer>>> solvedSchedulesTimePeriod; //Key=timePeriodId, valor=List<LessonIds>
     private List<Lesson> lessons;
 
+    private List<IntVar> teacherVars;
+    private List<IntVar> studentGroupVars;
+    private List<IntVar> subjectVars;
+    private List<IntVar> classroomVars;
+    private List<IntVar> timePeriodVars;
+
    public ScheduleSolver(List<Teacher> teacherCollection, List<StudentGroup> groupOfStudentCollection,
                          List<Subject> subjectCollection, List<Classroom> classroomCollection, List<TimePeriod> timePeriodCollection){
 
@@ -78,7 +84,9 @@ public class ScheduleSolver {
       numberOfClassrooms = classroomCollection.size();
       numberOfTimePeriods = timePeriodCollection.size();
 
-      numberOfLessons = numberOfStudentesGroup * numberOfTimePeriods;
+      //numberOfLessons = numberOfStudentesGroup * numberOfTimePeriods;
+       numberOfLessons =3;
+       //todo revisar
        System.out.println("numberOfLessons: " + numberOfLessons);
       lessons = new ArrayList<>();
       solvedSchedulesTeacher = new HashMap<>();
@@ -114,22 +122,35 @@ public class ScheduleSolver {
 
    private void defineVariables(){
          // Definimos las variables de decisión
-         for (int i = 0; i < numberOfLessons; i++) {
-              // Definimos las variables para cada lección
-              IntVar teacher = model.intVar("teacher" + i, 0, numberOfTeachers - 1);
-              IntVar studentGroup = model.intVar("studentGroup" + i, 0, numberOfStudentesGroup - 1);
-              IntVar subject = model.intVar("subject" + i, 0, numberOfSubjects - 1);
-              IntVar classroom = model.intVar("classroom" + i, 0, numberOfClassrooms - 1);
-              IntVar timePeriod = model.intVar("timePeriod" + i, 0, numberOfTimePeriods - 1);
 
-              lessons.add(new Lesson(teacher, studentGroup, subject, classroom, timePeriod));
-         }
+           teacherVars = new ArrayList<>();
+           studentGroupVars = new ArrayList<>();
+           subjectVars = new ArrayList<>();
+           classroomVars = new ArrayList<>();
+           timePeriodVars = new ArrayList<>();
+
+           for (int i = 0; i < numberOfLessons; i++) {
+               IntVar teacher = model.intVar("teacher" + i, 0, numberOfTeachers - 1);
+               IntVar studentGroup = model.intVar("studentGroup" + i, 0, numberOfStudentesGroup - 1);
+               IntVar subject = model.intVar("subject" + i, 0, numberOfSubjects - 1);
+               IntVar classroom = model.intVar("classroom" + i, 0, numberOfClassrooms - 1);
+               IntVar timePeriod = model.intVar("timePeriod" + i, 0, numberOfTimePeriods - 1);
+
+               teacherVars.add(teacher);
+               studentGroupVars.add(studentGroup);
+               subjectVars.add(subject);
+               classroomVars.add(classroom);
+               timePeriodVars.add(timePeriod);
+           }
 
    }
 
    private void defineHardConstraints(){
 
-       sameTeacherDifferentClassroom();
+     //  sameTeacherDifferentClassroom();
+       subjectHoursAndStudentGroups();
+       teacherOnlyOncePerTimePeriod();
+       subjectNotInSameTimePeriod();
 
    }
 
@@ -144,6 +165,19 @@ public class ScheduleSolver {
        // Imprimimos la solución
        if (solver.solve()) {
            System.out.println("Solution found!");
+           lessons.clear(); // Asegúrate de limpiar la lista antes de llenarla
+           for (int i = 0; i < numberOfLessons; i++) {
+               // Crear una nueva lección con los valores resueltos
+               Lesson lesson = new Lesson(
+                       teacherVars.get(i).getValue(),
+                       studentGroupVars.get(i).getValue(),
+                       subjectVars.get(i).getValue(),
+                       classroomVars.get(i).getValue(),
+                       timePeriodVars.get(i).getValue()
+               );
+               lessons.add(lesson); // Añadir la lección a la lista
+           }
+
            transform();
        } else {
            System.out.println("No solution found.");
@@ -154,6 +188,7 @@ public class ScheduleSolver {
    // Métodos para definir Hard Constraints
    //no puede haber 1 profesor en el mismo periodo de tiempo en 2 Aulas (Classrooms)
 
+    /*
    private void sameTeacherDifferentClassroom(){
 
        for (int i = 0; i < numberOfLessons; i++) {
@@ -168,7 +203,7 @@ public class ScheduleSolver {
                model.arithm(classroomCollection[i] , "=" , classroomCollection[j]).reifyWith(sameClassroom);
 
                model.ifThen(model.and(sameTeacher , sameTimePeriod) , model.arithm(sameClassroom, "<=", 1)); */
-
+/*
                Lesson lesson1 = lessons.get(i);
                Lesson lesson2 = lessons.get(j);
                model.ifThen (
@@ -183,7 +218,85 @@ public class ScheduleSolver {
 
        }
 
-   }
+   }*/
+
+    //Cada studentgroup ha de hacer un número de horas de cada asignatura que le corresponda
+    private void subjectHoursAndStudentGroups(){
+        for (int i = 0; i < numberOfStudentesGroup; i++) {
+            for (int j = 0; j < numberOfSubjects; j++) {
+
+                Subject subject = indexToSubjectMap.get(j);
+                int hours = subject.getWeeklyAssignedHours(); // Cambia esto por la lógica para obtener las horas de la asignatura
+                //int hours = 0; // Cambia esto por la lógica para obtener las horas de la asignatura
+                List<BoolVar> isSubjectAssigned = new ArrayList<>();
+
+                for (int k = 0; k < numberOfLessons; k++) {
+                    // Verificar si la lección pertenece al grupo de estudiantes y asignatura actuales
+                    BoolVar isAssigned = model.boolVar("studentGroup" + i + "_subject" + j + "_lesson" + k);
+                    model.ifThen(
+                            model.and(
+                                    model.arithm(studentGroupVars.get(k), "=", i),
+                                    model.arithm(subjectVars.get(k), "=", j)
+                            ),
+                            model.arithm(isAssigned, "=", 1)
+                    );
+                    isSubjectAssigned.add(isAssigned);
+                }
+
+
+                model.sum(isSubjectAssigned.toArray(new BoolVar[0]), "=", hours).post();
+            }
+
+        }
+
+    }
+       //cada profesor sólo puede dar clase una sólo vez por TimePeriod
+       private void teacherOnlyOncePerTimePeriod() {
+           for (int t = 0; t < numberOfTimePeriods; t++) {
+               for (int teacher = 0; teacher < numberOfTeachers; teacher++) {
+                   // Lista para almacenar las lecciones asignadas al mismo profesor y período
+                   List<BoolVar> lessonsInSamePeriod = new ArrayList<>();
+
+                   for (int i = 0; i < numberOfLessons; i++) {
+                       // Crear una variable booleana que indica si esta lección está asignada
+                       // a este profesor en este período
+                       BoolVar isAssigned = model.and(
+                               model.arithm(teacherVars.get(i), "=", teacher),
+                               model.arithm(timePeriodVars.get(i), "=", t)
+                       ).reify();
+
+                       lessonsInSamePeriod.add(isAssigned);
+                   }
+
+                   // Restricción: la suma debe ser ≤ 1 (máximo una lección por profesor y período)
+                   model.sum(lessonsInSamePeriod.toArray(new BoolVar[0]), "<=", 1).post();
+               }
+           }
+       }
+
+
+    private void subjectNotInSameTimePeriod() {
+        for (int subject = 0; subject < numberOfSubjects; subject++) {
+            for (int group = 0; group < numberOfStudentesGroup; group++) {
+                for (int t = 0; t < numberOfTimePeriods; t++) {
+                    // Lista para almacenar las lecciones de esta asignatura y grupo en este período
+                    List<BoolVar> lessonsInSamePeriod = new ArrayList<>();
+
+                    for (int lesson = 0; lesson < numberOfLessons; lesson++) {
+                        BoolVar isAssigned = model.and(
+                                model.arithm(subjectVars.get(lesson), "=", subject),
+                                model.arithm(studentGroupVars.get(lesson), "=", group),
+                                model.arithm(timePeriodVars.get(lesson), "=", t)
+                        ).reify();
+                        lessonsInSamePeriod.add(isAssigned);
+                    }
+
+                    // No más de 1 lección de la misma asignatura para el mismo grupo en un período
+                    model.sum(lessonsInSamePeriod.toArray(new BoolVar[0]), "<=", 1).post();
+                }
+            }
+        }
+    }
 
    //El traductor sólo es para debug
 
@@ -192,11 +305,11 @@ public class ScheduleSolver {
 
        for (Lesson l:lessons){
 
-               int teacherIndex = l.getTeacher().getValue();
-               int studentGroupIndex = l.getStudentGroup().getValue();
-               int subjectIndex = l.getSubject().getValue();
-               int classroomIndex = l.getClassroom().getValue();
-               int timePeriodIndex = l.getTimePeriod().getValue();
+               int teacherIndex = l.getTeacher();
+               int studentGroupIndex = l.getStudentGroup();
+               int subjectIndex = l.getSubject();
+               int classroomIndex = l.getClassroom();
+               int timePeriodIndex = l.getTimePeriod();
 
                Teacher teacher = indexToTeacherMap.get(teacherIndex);
                StudentGroup studentGroup = indexToStudentGroupMap.get(studentGroupIndex);
@@ -238,11 +351,11 @@ public class ScheduleSolver {
 
        // Para cada lección que se ha resuelto en el solver
        for (Lesson lesson : lessons) {
-           int teacherId = lesson.getTeacher().getValue();
-           int timePeriodId = lesson.getTimePeriod().getValue();
-           int subjectId = lesson.getSubject().getValue();
-           int studentGroupId = lesson.getStudentGroup().getValue();
-           int classroomId = lesson.getClassroom().getValue();
+           int teacherId = lesson.getTeacher();
+           int timePeriodId = lesson.getTimePeriod();
+           int subjectId = lesson.getSubject();
+           int studentGroupId = lesson.getStudentGroup();
+           int classroomId = lesson.getClassroom();
 
            // Creamos una lista para almacenar los detalles de la lección
            List<Integer> lessonDetails = new ArrayList<>();
@@ -258,7 +371,9 @@ public class ScheduleSolver {
            }
 
            // Añadimos los detalles de la lección a la lista del profesor
-           solvedSchedulesTeacher.get(teacherId).add(lessonDetails);
+           solvedSchedulesTeacher
+                   .computeIfAbsent(teacherId, k -> new ArrayList<>())
+                   .add(lessonDetails);
        }
 
        System.out.println("Transformación completada. Número de profesores con horario: " + solvedSchedulesTeacher.size());
@@ -282,14 +397,14 @@ public class ScheduleSolver {
 
         // Llenamos la matriz con las lecciones organizadas
         for (Lesson lesson : lessons) {
-            int teacherId = lesson.getTeacher().getValue();
-            int timePeriodId = lesson.getTimePeriod().getValue();
+            int teacherId = lesson.getTeacher();
+            int timePeriodId = lesson.getTimePeriod();
 
             // Creamos la lista de detalles
             List<Integer> details = new ArrayList<>();
-            details.add(lesson.getSubject().getValue());
-            details.add(lesson.getStudentGroup().getValue());
-            details.add(lesson.getClassroom().getValue());
+            details.add(lesson.getSubject());
+            details.add(lesson.getStudentGroup());
+            details.add(lesson.getClassroom());
 
             // Añadimos a la posición correspondiente en la matriz
             ((List<List<Integer>>) matrix[teacherId][timePeriodId]).add(details);

@@ -4,13 +4,13 @@ import org.chocosolver.solver.variables.IntVar;
 
 public class Lesson {
 
-    private IntVar teacher;
-    private IntVar studentGroup;
-    private IntVar classroom;
-    private IntVar timePeriod;
-    private IntVar subject;
+    private int teacher;
+    private int studentGroup;
+    private int classroom;
+    private int timePeriod;
+    private int subject;
 
-    public Lesson(IntVar teacher, IntVar studentGroup, IntVar classroom, IntVar timePeriod, IntVar subject) {
+    public Lesson(int teacher, int studentGroup, int classroom, int timePeriod, int subject) {
         this.teacher = teacher;
         this.studentGroup = studentGroup;
         this.classroom = classroom;
@@ -18,43 +18,43 @@ public class Lesson {
         this.subject = subject;
     }
 
-    public IntVar getTeacher() {
+    public int getTeacher() {
         return teacher;
     }
 
-    public void setTeacher(IntVar teacher) {
+    public void setTeacher(int teacher) {
         this.teacher = teacher;
     }
 
-    public IntVar getStudentGroup() {
+    public int getStudentGroup() {
         return studentGroup;
     }
 
-    public void setStudentGroup(IntVar studentGroup) {
+    public void setStudentGroup(int studentGroup) {
         this.studentGroup = studentGroup;
     }
 
-    public IntVar getClassroom() {
+    public int getClassroom() {
         return classroom;
     }
 
-    public void setClassroom(IntVar classroom) {
+    public void setClassroom(int classroom) {
         this.classroom = classroom;
     }
 
-    public IntVar getTimePeriod() {
+    public int getTimePeriod() {
         return timePeriod;
     }
 
-    public void setTimePeriod(IntVar timePeriod) {
+    public void setTimePeriod(int timePeriod) {
         this.timePeriod = timePeriod;
     }
 
-    public IntVar getSubject() {
+    public int getSubject() {
         return subject;
     }
 
-    public void setSubject(IntVar subject) {
+    public void setSubject(int subject) {
         this.subject = subject;
     }
 }

@@ -90,7 +90,10 @@ public class BusinessController {
             teacher2.setPhone("666333444");
             teacher2.setHoursWork(15);
 
-
+            Teacher teacher3 = new Teacher("T3", "Pepe Pez", "MLZ");
+            teacher3.setEmail("maria@ejemplo.com");
+            teacher3.setPhone("666333444");
+            teacher3.setHoursWork(15);
 
             // 3. Crear aulas
             Classroom classroom1 = new Classroom("C1", "Aula 101", "A101");
@@ -113,13 +116,13 @@ public class BusinessController {
             subject1.setCourse("1º DAM");
             subject1.setDepartment("dep1");
             subject1.setAssignedClassroom(classroom1);
-            subject1.setWeeklyAssignedHours(8);
+            subject1.setWeeklyAssignedHours(1);
 
             Subject subject2 = new Subject("S2", "Bases de Datos", "BBDD");
             subject2.setCourse("1º DAM");
             subject2.setDepartment("dep2");
             subject2.setAssignedClassroom(classroom2);
-            subject2.setWeeklyAssignedHours(6);
+            subject2.setWeeklyAssignedHours(2);
 
             // 5. Crear grupos de estudiantes
             StudentGroup group1 = new StudentGroup("G1", "Primer curso DAM", "1DAM");
@@ -127,14 +130,22 @@ public class BusinessController {
             group1.setAssignedTutor(teacher1);
             group1.setNumberOfStudents(25);
 
+            StudentGroup group2 = new StudentGroup("G2", "Primer curso DAM", "1DAM");
+            group2.setCourse("2º DAM");
+            group2.setAssignedTutor(teacher1);
+            group2.setNumberOfStudents(25);
+
+
             // 6. Crear periodos de tiempo
             LocalTime start = LocalTime.of(9, 0);
             LocalTime end = LocalTime.of(10, 0);
             TimePeriod period1 = new TimePeriod("TP1", 1, start, end);
-            period1.setIdTeacher(teacher1.getId());
-            period1.setIdSubject(subject1.getId());
-            period1.setIdStudentGroup(group1.getId());
-            period1.setIdClassroom(classroom1.getId());
+
+
+            start = LocalTime.of(11, 0);
+            end = LocalTime.of(12, 0);
+            TimePeriod period2 = new TimePeriod("TP2", 1, start, end);
+
 
             // 7. Asignar asignaturas a profesores
             teacher1.addPossibleSubject(subject1);
@@ -154,20 +165,26 @@ public class BusinessController {
             persistenceController.add(subject2);
             persistenceController.add(teacher1);
             persistenceController.add(teacher2);
+            persistenceController.add(teacher3);
             persistenceController.add(activity1);
             persistenceController.add(group1);
+            persistenceController.add(group2);
             persistenceController.add(period1);
+            persistenceController.add(period2);
 
             System.out.println("Datos de ejemplo creados correctamente");
 
             teachers.add(teacher1);
             teachers.add(teacher2);
+            teachers.add(teacher3);
             classrooms.add(classroom1);
             classrooms.add(classroom2);
             subjects.add(subject1);
             subjects.add(subject2);
             studentGroups.add(group1);
+            studentGroups.add(group2);
             timePeriods.add(period1);
+            timePeriods.add(period2);
 
 
         } catch (Exception e) {

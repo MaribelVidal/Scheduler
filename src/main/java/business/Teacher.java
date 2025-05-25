@@ -78,4 +78,6 @@ public class Teacher extends Entity {
     public void addPossibleSubject(Subject subject){
         possibleSubjects.add(subject);
     }
+
+    public boolean canTeach(Subject subject) {    return possibleSubjects.contains(subject);}
 }

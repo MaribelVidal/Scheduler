@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.UUID;
 
 public class BusinessController {
-    private ScheduleSolver solver;
+    //private ScheduleSolver solver;
 
     private List<Teacher> teachers;
     private List<StudentGroup> studentGroups;
@@ -43,7 +43,7 @@ public class BusinessController {
     }
 
     public void test () {
-       solver.printMatrix();
+       //solver.printMatrix();
     }
 
 
@@ -68,7 +68,7 @@ public class BusinessController {
     }
 
     public void solve (){
-        this.solver = new ScheduleSolver(teachers, studentGroups, subjects, classrooms, timePeriods);
+        //this.solver = new ScheduleSolver(teachers, studentGroups, subjects, classrooms, timePeriods);
 
     }
 
@@ -116,13 +116,13 @@ public class BusinessController {
             subject1.setCourse("1º DAM");
             subject1.setDepartment("dep1");
             subject1.setAssignedClassroom(classroom1);
-            subject1.setWeeklyAssignedHours(1);
+            subject1.setWeeklyAssignedHours(3);
 
             Subject subject2 = new Subject("S2", "Bases de Datos", "BBDD");
             subject2.setCourse("1º DAM");
             subject2.setDepartment("dep2");
             subject2.setAssignedClassroom(classroom2);
-            subject2.setWeeklyAssignedHours(2);
+            subject2.setWeeklyAssignedHours(3);
 
             // 5. Crear grupos de estudiantes
             StudentGroup group1 = new StudentGroup("G1", "Primer curso DAM", "1DAM");
@@ -190,6 +190,53 @@ public class BusinessController {
         } catch (Exception e) {
             System.err.println("Error creando datos de ejemplo: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    public void testH() {
+        // Define sample data (replace with your actual data loading)
+        Subject math = new Subject("S01", "Mathematics", "MATH");
+        Subject physics = new Subject("S02", "Physics", "PHYS");
+        Subject history = new Subject("S03", "History", "HIST");
+        Subject chemistry = new Subject("S04", "Chemistry", "CHEM");
+
+
+        Teacher teacherAlice = new Teacher("T01", "Alice", "AL");
+        teacherAlice.setPossibleSubjects(List.of(math, physics));
+        Teacher teacherBob = new Teacher("T02", "Bob", "BOB");
+        teacherBob.setPossibleSubjects(List.of(history, chemistry));
+        Teacher teacherCarol = new Teacher("T03", "Carol", "CAR");
+        teacherCarol.setPossibleSubjects(List.of(math, history));
+
+
+        Classroom room101 = new Classroom("C01", "Room 101", "1");
+        Classroom room102 = new Classroom("C02", "Room 102", " 2");
+        Classroom room103 = new Classroom("C03", "Room 103", "3");
+
+        StudentGroup grade9 = new StudentGroup("SG01", "Grade 9", "1");
+        grade9.setRequiredSubjects(List.of(math, history, physics));
+        StudentGroup grade10 = new StudentGroup("SG02", "Grade 10", "2");
+        grade10.setRequiredSubjects(List.of(math, chemistry));
+
+        TimePeriod mon9 = new TimePeriod("TP01", 1, LocalTime.of(9, 0), LocalTime.of(10, 0));
+        TimePeriod mon10 = new TimePeriod("TP02", 1, LocalTime.of(10, 0), LocalTime.of(11, 0));
+        TimePeriod tue9 = new TimePeriod("TP03", 2, LocalTime.of(9, 0), LocalTime.of(10, 0));
+        TimePeriod tue10 = new TimePeriod("TP04", 2, LocalTime.of(10, 0), LocalTime.of(11, 0));
+
+
+        List<Teacher> teachers = List.of(teacherAlice, teacherBob, teacherCarol);
+        List<Classroom> classrooms = List.of(room101, room102, room103);
+        List<StudentGroup> studentGroups = List.of(grade9, grade10);
+        List<TimePeriod> timePeriods = List.of(mon9, mon10, tue9, tue10);
+
+        System.out.println("Attempting to create schedule...");
+        ScheduleSolver scheduleSolver = new ScheduleSolver(teachers, classrooms, studentGroups, timePeriods);
+        Schedule generatedSchedule = scheduleSolver.createSchedule();
+
+        if (generatedSchedule != null) {
+            generatedSchedule.printSchedule();
+        } else {
+            System.out.println("Failed to generate a schedule.");
         }
     }
 }

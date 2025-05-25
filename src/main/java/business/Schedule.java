@@ -1,23 +1,28 @@
 package business;
 
-//Clase para guardar los horarios generados
+import java.util.ArrayList;
+import java.util.List;
+
 public class Schedule {
-    // ej. el 00 será periodo lunes 8.00-9.00
-    private int[][] periodSchedule;
+    public List<String> assignments; // Example: storing assignments as strings
 
-
-    public Schedule () {
-
-        // periodos de L-V de 8.30 a 20.30
-        this.periodSchedule = new int[5][24];
+    public Schedule() {
+        this.assignments = new ArrayList<>();
     }
 
-    public int[][] getSchedule() {
-        return periodSchedule;
-
+    public void addAssignment(ScheduledUnit unit, Teacher teacher, Classroom classroom, TimePeriod timePeriod) {
+        String assignment = String.format("%s: Teacher=%s, Classroom=%s, Time=%s",
+                unit.toString(), teacher.getId(), classroom.getId(), timePeriod.getId());
+        assignments.add(assignment);
     }
 
-
-
-
+    public void printSchedule() {
+        if (assignments.isEmpty()) {
+            System.out.println("No assignments in the schedule.");
+            return;
+        }
+        System.out.println("--- Generated Schedule ---");
+        assignments.forEach(System.out::println);
+        System.out.println("--------------------------");
+    }
 }

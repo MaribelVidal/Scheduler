@@ -2,10 +2,13 @@ package business;// generate csp solution for a schedule creator, knowing the va
 
 import org.chocosolver.solver.Model;
 import org.chocosolver.solver.Solution;
+import org.chocosolver.solver.constraints.extension.Tuples;
+import org.chocosolver.solver.variables.BoolVar;
 import org.chocosolver.solver.variables.IntVar;
 
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -55,7 +58,13 @@ public class ScheduleSolver {
         for (StudentGroup sg : studentGroups) {
             if (sg.getRequiredSubjects() != null) {
                 for (Subject subj : sg.getRequiredSubjects()) {
+                    for (int i = 0; i < subj.getWeeklyAssignedHours(); i++) {
+                        // Create a ScheduledUnit for each subject lesson required by the student group
+                        // Each unit is uniquely identified by a combination of student group and subject
+                        // The unitIdCounter ensures unique IDs for each ScheduledUnit
+                        System.out.println("Creating unit for StudentGroup: " + sg.getId() + ", Subject: " + subj.getId() + ", Unit ID: " + unitIdCounter);
                     scheduledUnits.add(new ScheduledUnit(sg, subj, unitIdCounter++));
+                    }
                 }
             }
         }
@@ -85,6 +94,26 @@ public class ScheduleSolver {
 
 
     public void addConstraints(){
+
+        // creamos lista para: cada profesor los horarios en los que puede trabajar
+        Tuples allowTeacherTimePeriodsPairs = new Tuples(true);
+        if (numTeachers > 0 && numTimePeriods > 0) {
+            // Allow all pairs of teachers and time periods
+            for (int tIdx = 0; tIdx < numTeachers; tIdx++) {
+                Teacher teacher = teachers.get(tIdx);
+                for (int tpIdx = 0; tpIdx < numTimePeriods; tpIdx++) {
+                    TimePeriod timePeriod = timePeriods.get(tpIdx);
+                    if (teacher.isAvailable(timePeriod)) {
+                        // If the teacher is available at this time period, allow this pair
+                        allowTeacherTimePeriodsPairs.add(tIdx, tpIdx);
+                    }
+
+                }
+            }
+        }
+
+
+
         // 3. Add constraints
         for (int i = 0; i < numUnits; i++) {
             ScheduledUnit currentUnit = scheduledUnits.get(i);
@@ -130,8 +159,79 @@ public class ScheduleSolver {
                     model.arithm(unitTimePeriodVars[i], "!=", unitTimePeriodVars[j]).post();
                 }
             }
-        }
 
+            // Constraint: Subject must be don in AssignedClassroom if it has.
+           Subject subject = currentUnit.getSubject();
+           Classroom assignedClassroom = subject.getAssignedClassroom();
+            if (assignedClassroom != null) {
+                int index = -1;
+                for (int cIdx = 0; cIdx < numClassrooms; cIdx++) {
+                    if (classrooms.get(cIdx).getId().equals(assignedClassroom.getId())) {
+                        index = cIdx;
+                        break;
+                    }
+                }
+                if (index != -1) {
+                    // If the subject has an assigned classroom, enforce that this unit must use that classroom.
+                    model.arithm(unitClassroomVars[i], "=", index).post();
+                } else {
+                    System.err.println("Error: Assigned classroom for subject " + subject.getId() +
+                            " not found in the list of classrooms. This unit may not be scheduled correctly.");
+                    model.member(unitClassroomVars[i], new int[]{}).post();
+                }
+            }
+
+            // Constraint: Si Classroom tiene asignaturas asignadas, solo esas asignaturas la pueden usar.
+            if (numClassrooms > 0) {
+                List<Integer> allowedClassroomIndices = new ArrayList<>();
+                for (int cIdx = 0; cIdx < numClassrooms; cIdx++) {
+                    Classroom classroom = classrooms.get(cIdx);
+                    List<Subject> assignedSubjects = classroom.getAssignedSubjects();
+
+                    // Si el aula no tiene asignaturas asignadas o contiene la asignatura de la unidad actual
+                    if (assignedSubjects == null || assignedSubjects.isEmpty() ||
+                            assignedSubjects.stream().anyMatch(subj ->
+                                    subj.getId().equals(currentUnit.getSubject().getId()))) {
+                        allowedClassroomIndices.add(cIdx);
+                    }
+                }
+
+                if (!allowedClassroomIndices.isEmpty()) {
+                    model.member(unitClassroomVars[i],
+                            allowedClassroomIndices.stream().mapToInt(Integer::intValue).toArray()).post();
+                } else {
+                    System.err.println("Error: No classrooms available for subject " +
+                            currentUnit.getSubject().getId() + ". This unit may not be scheduled correctly.");
+                    model.member(unitClassroomVars[i], new int[]{}).post();
+                }
+            }
+
+            // Constraint: Classroom must have enough capacity for the student group.
+            if (numClassrooms > 0 && currentUnit.getStudentGroup() != null) {
+                int studentGroupSize = currentUnit.getStudentGroup().getNumberOfStudents();
+                int[] allClassroomCapacities = classrooms.stream()
+                        .mapToInt(Classroom::getCapacity)
+                        .toArray();
+                int maxCapacity = Arrays.stream(allClassroomCapacities).max().orElse(0);
+                IntVar classroomCapacityVar = model.intVar("classroom_capacity_" + i, 0, maxCapacity);
+                model.element(classroomCapacityVar, allClassroomCapacities, unitClassroomVars[i]).post();
+                model.arithm(classroomCapacityVar, ">=", studentGroupSize).post();
+            }
+
+            // Constraint: Time period must be allowed for the teacher.
+            if (numTeachers > 0 && numTimePeriods > 0) {
+                // Use the predefined pairs of allowed teacher-time period combinations
+                model.table(new IntVar[]{unitTeacherVars[i], unitTimePeriodVars[i]},
+                        allowTeacherTimePeriodsPairs).post();
+            } else {
+                System.err.println("Error: No teachers or time periods defined. Cannot enforce time period constraints.");
+            }
+
+            //Constraint: Si la Classroom tiene asignaturas asignada, solo esas asignaturas la pueden usar.
+
+
+        }
+/*
         // AllDifferent constraint for (teacher, timeperiod) pairs to ensure a teacher is not in two places at once.
         // This is more robust than the pairwise check ifThen for teacher clashes.
         IntVar[] teacherTimePairs = new IntVar[numUnits];
@@ -164,6 +264,32 @@ public class ScheduleSolver {
             model.scalar(new IntVar[]{unitStudentGroupIdxVar, unitTimePeriodVars[i]}, new int[]{numTimePeriods, 1}, "=", studentGroupTimePairs[i]).post();
         }
         model.allDifferent(studentGroupTimePairs, "AC").post();
+
+*/
+        // Constraint: No teacher can teach more hours than what they are allowed to.
+        // Assumes Teacher.getMaxHours() exists.
+        // Assumes Subject.getDurationInHours() exists and returns the duration of one ScheduledUnit for that subject.
+        // If all units are 1 hour, then getDurationInHours() should return 1.
+        if (numTeachers > 0 && numUnits > 0) {
+            for (int tIdx = 0; tIdx < numTeachers; tIdx++) {
+                Teacher teacher = teachers.get(tIdx);
+                IntVar[] unitsTaughtByTeacher = new IntVar[numUnits];
+                int[] unitDurations = new int[numUnits];
+
+                for (int uIdx = 0; uIdx < numUnits; uIdx++) {
+                    // unitTaughtByTeacher[uIdx] will be 1 if teacher tIdx teaches unit uIdx, 0 otherwise.
+                    unitsTaughtByTeacher[uIdx] = model.boolVar("teaches_unit_" + uIdx + "_by_teacher_" + tIdx);
+                    model.arithm(unitTeacherVars[uIdx], "=", tIdx).reifyWith((BoolVar) unitsTaughtByTeacher[uIdx]);
+                    unitDurations[uIdx] = scheduledUnits.get(uIdx).getSubject().getDuration(); // Assumed method
+                }
+                // Sum of (unitsTaughtByTeacher[u] * unitDurations[u]) <= teacher.getMaxHours()
+                model.scalar(unitsTaughtByTeacher, unitDurations, "<=", teacher.getHoursWork()).post();
+            }
+        }
+
+
+
+
 
 
 

@@ -14,6 +14,7 @@ public class StudentGroup extends Entity{
 
     public StudentGroup(String id, String name, String abbreviation) {
         super(id, name, abbreviation);
+        this.numberOfStudents = 25; // Inicializar a 0 por defecto
     }
 
     public String getCourse() {

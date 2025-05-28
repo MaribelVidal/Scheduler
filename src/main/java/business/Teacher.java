@@ -16,6 +16,10 @@ public class Teacher extends Entity {
     private int hoursWork; // Máximo número de horas
     //private int assignedHoursWork; // horas de docencia asignadas
 
+    //horario prohibido
+    private List<TimePeriod> unavailableTimePeriods; // Horarios no disponibles
+
+
     //preferencias
 
 
@@ -24,6 +28,8 @@ public class Teacher extends Entity {
 
         super(id, name, abbreviation);
         this.possibleSubjects= new ArrayList<>();
+        this.hoursWork= 25;
+        this.unavailableTimePeriods= new ArrayList<>();// Default working hours per week
     }
 
 
@@ -77,6 +83,22 @@ public class Teacher extends Entity {
 
     public void addPossibleSubject(Subject subject){
         possibleSubjects.add(subject);
+    }
+
+    public List<TimePeriod> getUnavailableTimePeriods() {
+        return unavailableTimePeriods;
+    }
+
+    public void setUnavailableTimePeriods(List<TimePeriod> unavailableTimePeriods) {
+        this.unavailableTimePeriods = unavailableTimePeriods;
+    }
+
+    public void addUnavailableTimePeriods(TimePeriod timePeriod) {
+        unavailableTimePeriods.add(timePeriod);
+    }
+
+    public boolean isAvailable(TimePeriod timePeriod) {
+        return !unavailableTimePeriods.contains(timePeriod);
     }
 
     public boolean canTeach(Subject subject) {    return possibleSubjects.contains(subject);}

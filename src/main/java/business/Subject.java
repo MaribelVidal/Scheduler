@@ -9,10 +9,13 @@ public class Subject extends Entity{
     private int weeklyAssignedHours;
     private String course;// ejemplo 4ESO
     private Classroom assignedClassroom;
+    private int duration; // Duración de la asignatura en horas
 
 
     public Subject(String id, String name, String abbreviation) {
         super(id, name, abbreviation);
+        this.weeklyAssignedHours = 1; // Inicializar a 0 por defecto
+        this.duration = 1; // Default duration is 1 hour
     }
 
     public String getDepartment() {
@@ -45,5 +48,12 @@ public class Subject extends Entity{
 
     public void setAssignedClassroom(Classroom assignedClassroom) {
         this.assignedClassroom = assignedClassroom;
+    }
+
+    public int getDuration() {
+        return duration;
+    }
+    public void setDuration(int duration) {
+        this.duration = duration;
     }
 }

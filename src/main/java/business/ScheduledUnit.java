@@ -11,6 +11,30 @@ public class ScheduledUnit {
         this.uniqueId = uniqueId;
     }
 
+    public StudentGroup getStudentGroup() {
+        return studentGroup;
+    }
+
+    public void setStudentGroup(StudentGroup studentGroup) {
+        this.studentGroup = studentGroup;
+    }
+
+    public Subject getSubject() {
+        return subject;
+    }
+
+    public void setSubject(Subject subject) {
+        this.subject = subject;
+    }
+
+    public int getUniqueId() {
+        return uniqueId;
+    }
+
+    public void setUniqueId(int uniqueId) {
+        this.uniqueId = uniqueId;
+    }
+
     @Override
     public String toString() {
         return "Unit-" + uniqueId + "[" + studentGroup.getId() + " - " + subject.getId() + "]";

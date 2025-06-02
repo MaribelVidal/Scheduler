@@ -86,10 +86,6 @@ public class BusinessController {
             teacher1.setPhone("666111222");
             teacher1.setHoursWork(15);
 
-
-
-
-
             Teacher teacher2 = new Teacher("T5", "María López", "MLZ");
             teacher2.setEmail("maria@ejemplo.com");
             teacher2.setPhone("666333444");
@@ -128,7 +124,7 @@ public class BusinessController {
             subject2.setDepartment("dep2");
             subject2.setAssignedClassroom(classroom2);
             subject2.setWeeklyAssignedHours(3);
-            classroom1.addAssignedSubject(subject1);
+            //classroom1.addAssignedSubject(subject1);
 
             // 5. Crear grupos de estudiantes
             StudentGroup group1 = new StudentGroup("G3", "Primer curso DAM", "1DAM");
@@ -244,6 +240,9 @@ public class BusinessController {
         TimePeriod tue11 = new TimePeriod("TP07", 2, LocalTime.of(9, 0), LocalTime.of(10, 0));
         TimePeriod tue12 = new TimePeriod("TP08", 2, LocalTime.of(10, 0), LocalTime.of(11, 0));
 
+        teacherAlice.addPreferredTimePeriod(mon9);
+        teacherAlice.addPreferredTimePeriod(mon10);
+        teacherCarol.addPreferredTimePeriod(tue10);
 
         teachers = new ArrayList<>(List.of(teacherAlice, teacherBob, teacherCarol));
         classrooms = new ArrayList<>(List.of(room101, room102, room103, room104));
@@ -251,7 +250,7 @@ public class BusinessController {
         timePeriods = new ArrayList<>(List.of(mon9, mon10, tue9, tue10, mon11, mon12, tue11, tue12));
         subjects = new ArrayList<>(List.of(math, physics, history, chemistry));
 
-        createExampleData();
+        //createExampleData();
 
         for (Teacher teacher : teachers) {
             System.out.println("Teacher: " + teacher.getName() + ", Subjects: " + teacher.getPossibleSubjects());

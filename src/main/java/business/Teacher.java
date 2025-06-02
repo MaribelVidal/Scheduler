@@ -21,7 +21,7 @@ public class Teacher extends Entity {
 
 
     //preferencias
-
+    private List<TimePeriod> preferredTimePeriods; // Horarios preferidos
 
 
     public Teacher(String id, String name, String abbreviation) {
@@ -29,7 +29,9 @@ public class Teacher extends Entity {
         super(id, name, abbreviation);
         this.possibleSubjects= new ArrayList<>();
         this.hoursWork= 25;
-        this.unavailableTimePeriods= new ArrayList<>();// Default working hours per week
+        this.unavailableTimePeriods= new ArrayList<>();
+        this.preferredTimePeriods= new ArrayList<>();
+
     }
 
 
@@ -102,4 +104,18 @@ public class Teacher extends Entity {
     }
 
     public boolean canTeach(Subject subject) {    return possibleSubjects.contains(subject);}
+
+
+    public List<TimePeriod> getPreferredTimePeriods() {
+        return preferredTimePeriods;
+    }
+    public void setPreferredTimePeriods(List<TimePeriod> preferredTimePeriods) {
+        this.preferredTimePeriods = preferredTimePeriods;
+    }
+    public void addPreferredTimePeriod(TimePeriod timePeriod) {
+        preferredTimePeriods.add(timePeriod);
+    }
+    public boolean prefersTimePeriod(TimePeriod timePeriod) {
+        return preferredTimePeriods.contains(timePeriod);
+    }
 }

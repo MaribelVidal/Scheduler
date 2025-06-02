@@ -2,6 +2,7 @@ package business;// generate csp solution for a schedule creator, knowing the va
 
 import org.chocosolver.solver.Model;
 import org.chocosolver.solver.Solution;
+//import org.chocosolver.solver.constraints.extension.Tuples;
 import org.chocosolver.solver.constraints.extension.Tuples;
 import org.chocosolver.solver.variables.BoolVar;
 import org.chocosolver.solver.variables.IntVar;
@@ -160,7 +161,7 @@ public class ScheduleSolver {
                 }
             }
 
-            // Constraint: Subject must be don in AssignedClassroom if it has.
+            // Constraint: Subject must be done in AssignedClassroom if it has.
            Subject subject = currentUnit.getSubject();
            Classroom assignedClassroom = subject.getAssignedClassroom();
             if (assignedClassroom != null) {
@@ -182,6 +183,7 @@ public class ScheduleSolver {
             }
 
             // Constraint: Si Classroom tiene asignaturas asignadas, solo esas asignaturas la pueden usar.
+            /* Lo comentamos para avanzar,
             if (numClassrooms > 0) {
                 List<Integer> allowedClassroomIndices = new ArrayList<>();
                 for (int cIdx = 0; cIdx < numClassrooms; cIdx++) {
@@ -205,7 +207,7 @@ public class ScheduleSolver {
                     model.member(unitClassroomVars[i], new int[]{}).post();
                 }
             }
-
+*/
             // Constraint: Classroom must have enough capacity for the student group.
             if (numClassrooms > 0 && currentUnit.getStudentGroup() != null) {
                 int studentGroupSize = currentUnit.getStudentGroup().getNumberOfStudents();
@@ -295,6 +297,73 @@ public class ScheduleSolver {
 
     }
 
+    // SOFT CONSTRAINTS
+
+    // Teacher prefer certain TimePeriods.
+
+
+    public void addSoftConstraints(){
+
+        if (numTeachers > 0 && numTimePeriods > 0 && numUnits > 0) {
+            // Use the predefined pairs of allowed teacher-time period combinations
+            Tuples preferredTeacherTimePeriodsPairs = new Tuples(true);
+            for (int tIdx = 0; tIdx < numTeachers; tIdx++) {
+                Teacher teacher = teachers.get(tIdx);
+                List<TimePeriod> preferredTimePeriods = teacher.getPreferredTimePeriods();
+                if (preferredTimePeriods != null) {
+                    for (int tpIdx = 0; tpIdx < numTimePeriods; tpIdx++) {
+                        TimePeriod timePeriod = timePeriods.get(tpIdx);
+                        if (preferredTimePeriods.contains(timePeriod)) {
+                            // If the teacher prefers this time period, allow this pair
+                            preferredTeacherTimePeriodsPairs.add(tIdx, tpIdx);
+                        }
+
+
+                    }
+
+            }
+        }
+
+        List<BoolVar> teacherPreferencesPenalty = new ArrayList<>();
+        for (int i = 0; i < numUnits; i++) {
+            BoolVar prefersTimePeriod = model.boolVar("prefers_time_period_" + i);
+            teacherPreferencesPenalty.add(prefersTimePeriod);
+            if (preferredTeacherTimePeriodsPairs.nbTuples() != 0) {
+                // If the teacher prefers the time period for this unit, set the penalty to 0
+                model.ifThenElse(
+                        model.table(new IntVar[]{unitTeacherVars[i], unitTimePeriodVars[i]}, preferredTeacherTimePeriodsPairs),
+                        model.arithm(prefersTimePeriod, "=", 0), model.arithm(prefersTimePeriod, "=", 1)
+                );
+            } else {
+                // If no preferences are defined, we assume no penalty
+                model.arithm(prefersTimePeriod, "=", 0).post();
+            }
+        }
+        IntVar totalPreferencePenalty = model.intVar("total_preference_penalty", 0, numUnits);
+        model.sum(teacherPreferencesPenalty.toArray(new BoolVar[0]), "=", totalPreferencePenalty).post();
+        model.setObjective(Model.MINIMIZE, totalPreferencePenalty);
+        } else {
+            System.err.println("Error: No teachers, time periods, or units defined. Cannot add soft constraints.");
+
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    }
+
+
+
+
     private Schedule solveModel(){
         Solution solution = model.getSolver().findSolution();
         Schedule schedule = new Schedule(); // Your schedule representation
@@ -332,6 +401,7 @@ public class ScheduleSolver {
 
         defineVariables();
         addConstraints();
+        addSoftConstraints();
         return solveModel();
 
 

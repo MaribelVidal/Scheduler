@@ -20,8 +20,15 @@ public class Teacher extends Entity {
     private List<TimePeriod> unavailableTimePeriods; // Horarios no disponibles
 
 
-    //preferencias
+    //horarios deseados
     private List<TimePeriod> preferredTimePeriods; // Horarios preferidos
+
+    //horarios no deseados
+    private List<TimePeriod> unPreferredTimePeriods; // Horarios no deseados
+
+    //Asignaturas deseadas
+
+    private List<Subject> preferredSubjects; // Asignaturas preferidas
 
 
     public Teacher(String id, String name, String abbreviation) {
@@ -31,7 +38,8 @@ public class Teacher extends Entity {
         this.hoursWork= 25;
         this.unavailableTimePeriods= new ArrayList<>();
         this.preferredTimePeriods= new ArrayList<>();
-
+        this.unPreferredTimePeriods= new ArrayList<>();
+        this.preferredSubjects = new ArrayList<>();
     }
 
 
@@ -117,5 +125,26 @@ public class Teacher extends Entity {
     }
     public boolean prefersTimePeriod(TimePeriod timePeriod) {
         return preferredTimePeriods.contains(timePeriod);
+    }
+    public List<TimePeriod> getUnPreferredTimePeriods() {
+        return unPreferredTimePeriods;
+    }
+    public void setUnPreferredTimePeriods(List<TimePeriod> unPreferredTimePeriods) {
+        this.unPreferredTimePeriods = unPreferredTimePeriods;
+    }
+
+    public List<Subject> getPreferredSubjects() {
+        return preferredSubjects;
+    }
+
+    public void setPreferredSubjects(List<Subject> preferredSubjects) {
+        this.preferredSubjects = preferredSubjects;
+    }
+
+    public void addUnPreferredTimePeriod(TimePeriod timePeriod) {
+        unPreferredTimePeriods.add(timePeriod);
+    }
+    public boolean dislikesTimePeriod(TimePeriod timePeriod) {
+        return unPreferredTimePeriods.contains(timePeriod);
     }
 }

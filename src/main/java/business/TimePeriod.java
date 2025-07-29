@@ -6,7 +6,7 @@ import java.util.List;
 public class TimePeriod {
 
    private String id;
-   private int weekday;
+   private String weekday;
    private LocalTime initialHour;
    private LocalTime finalHour;
    private String idTeacher;
@@ -14,7 +14,7 @@ public class TimePeriod {
    private String idStudentGroup;
    private String idClassroom;
 
-    public TimePeriod(String id, int weekday, LocalTime initialHour, LocalTime finalHour) {
+    public TimePeriod(String id, String weekday, LocalTime initialHour, LocalTime finalHour) {
 
         this.id = id;
         this.weekday = weekday;
@@ -31,11 +31,11 @@ public class TimePeriod {
         this.id = id;
     }
 
-    public int getWeekday() {
+    public String getWeekday() {
         return weekday;
     }
 
-    public void setWeekday(int weekday) {
+    public void setWeekday(String weekday) {
         this.weekday = weekday;
     }
 

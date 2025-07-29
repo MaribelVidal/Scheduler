@@ -23,7 +23,7 @@ public class TimePeriodDAO implements DAO<TimePeriod>{
         String query = "INSERT INTO timePeriods (id, weekDay, initialHour, finalHour, idTeacher, idSubject, idStudentGroup, idClassroom) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1,timePeriod.getId());
-            preparedStatement.setInt(2,timePeriod.getWeekday());
+            preparedStatement.setString(2,timePeriod.getWeekday());
             preparedStatement.setTime(3,java.sql.Time.valueOf(timePeriod.getInitialHour()));
             preparedStatement.setTime(4,java.sql.Time.valueOf(timePeriod.getFinalHour()));
             preparedStatement.setString(5,timePeriod.getIdTeacher());
@@ -39,7 +39,7 @@ public class TimePeriodDAO implements DAO<TimePeriod>{
     public void update(TimePeriod timePeriod) throws SQLException {
         String query = "UPDATE timePeriods SET weekDay = ?, initialHour = ?, finalHour = ?, idTeacher = ?, idSubject = ?, idStudentGroup = ?, idClassroom = ? WHERE id = ?";
         try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-            preparedStatement.setInt(1, timePeriod.getWeekday());
+            preparedStatement.setString(1, timePeriod.getWeekday());
             preparedStatement.setTime(2,java.sql.Time.valueOf(timePeriod.getInitialHour()));
             preparedStatement.setTime(3,java.sql.Time.valueOf(timePeriod.getFinalHour()));
             preparedStatement.setString(4, timePeriod.getIdTeacher());
@@ -61,7 +61,7 @@ public class TimePeriodDAO implements DAO<TimePeriod>{
 
             while (resultset.next()) {
                 String id = resultset.getString("id");
-                int weekDay = resultset.getInt("weekDay");
+                String weekDay = resultset.getString("weekDay");
                 LocalTime initialHour = resultset.getTime("initialHour").toLocalTime();
                 LocalTime finalHour = resultset.getTime("finalHour").toLocalTime();
                 String idTeacher = resultset.getString("idTeacher");
@@ -110,7 +110,7 @@ public class TimePeriodDAO implements DAO<TimePeriod>{
             ResultSet resultset = preparedStatement.executeQuery();
             if (resultset.next()) {
                 String id = resultset.getString("id");
-                int weekDay = resultset.getInt("weekDay");
+                String weekDay = resultset.getString("weekDay");
                 LocalTime initialHour = resultset.getTime("initialHour").toLocalTime();
                 LocalTime finalHour = resultset.getTime("finalHour").toLocalTime();
                 String idTeacher = resultset.getString("idTeacher");

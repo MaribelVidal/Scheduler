@@ -18,9 +18,12 @@ public class BusinessController {
     private List<Classroom> classrooms;
     private List<TimePeriod> timePeriods;
 
+
+
     private PersistenceController persistenceController;
 
     public BusinessController() throws Exception {
+
 /*
         this.persistenceController = new PersistenceController();
         persistenceController.initialize();
@@ -49,12 +52,12 @@ public class BusinessController {
 
 
 
-    public void createAllTimePeriods (int weekDay, LocalTime initialHourDay, LocalTime finalHourDay, LocalTime period){
+    public void createAllTimePeriods (String weekDay, LocalTime initialHourDay, LocalTime finalHourDay, LocalTime period){
         long totalMinutes = Duration.between(initialHourDay, finalHourDay).toMinutes();
         long periodMinutes = period.getHour()*60 + period.getMinute();
         int timePeriodNumber = (int) (totalMinutes / periodMinutes);
 
-        for (int i = 0; i < weekDay; i++) {
+        for (int i = 0; i < 5; i++) {
             for (int j = 0; j < timePeriodNumber; j++) {
               TimePeriod timeperiod = new TimePeriod(UUID.randomUUID().toString(), weekDay, initialHourDay, period);
                 timePeriods.add(timeperiod);
@@ -142,12 +145,12 @@ public class BusinessController {
             // 6. Crear periodos de tiempo
             LocalTime start = LocalTime.of(9, 0);
             LocalTime end = LocalTime.of(10, 0);
-            TimePeriod period1 = new TimePeriod("TP4", 1, start, end);
+            TimePeriod period1 = new TimePeriod("TP4", "Lunes", start, end);
             //teacher1.addUnavailableTimePeriods(period1);
 
             start = LocalTime.of(11, 0);
             end = LocalTime.of(12, 0);
-            TimePeriod period2 = new TimePeriod("TP5", 1, start, end);
+            TimePeriod period2 = new TimePeriod("TP5", "Lunes", start, end);
 
 
             // 7. Asignar asignaturas a profesores
@@ -204,14 +207,14 @@ public class BusinessController {
         // Define sample data (replace with your actual data loading)
 
 
-        TimePeriod mon9 = new TimePeriod("mon9", 1, LocalTime.of(9, 0), LocalTime.of(10, 0));
-        TimePeriod mon10 = new TimePeriod("mon10", 1, LocalTime.of(10, 0), LocalTime.of(11, 0));
-        TimePeriod tue9 = new TimePeriod("tue9", 2, LocalTime.of(9, 0), LocalTime.of(10, 0));
-        TimePeriod tue10 = new TimePeriod("tue10", 2, LocalTime.of(10, 0), LocalTime.of(11, 0));
-        TimePeriod mon11 = new TimePeriod("mon11", 1, LocalTime.of(9, 0), LocalTime.of(10, 0));
-        TimePeriod mon12= new TimePeriod("mon12", 1, LocalTime.of(10, 0), LocalTime.of(11, 0));
-        TimePeriod tue11 = new TimePeriod("tue11", 2, LocalTime.of(9, 0), LocalTime.of(10, 0));
-        TimePeriod tue12 = new TimePeriod("tue12", 2, LocalTime.of(10, 0), LocalTime.of(11, 0));
+        TimePeriod mon9 = new TimePeriod("mon9", "Lunes", LocalTime.of(9, 0), LocalTime.of(10, 0));
+        TimePeriod mon10 = new TimePeriod("mon10", "Lunes", LocalTime.of(10, 0), LocalTime.of(11, 0));
+        TimePeriod tue9 = new TimePeriod("tue9", "Martes", LocalTime.of(9, 0), LocalTime.of(10, 0));
+        TimePeriod tue10 = new TimePeriod("tue10", "Martes", LocalTime.of(10, 0), LocalTime.of(11, 0));
+        TimePeriod mon11 = new TimePeriod("mon11", "Lunes", LocalTime.of(9, 0), LocalTime.of(10, 0));
+        //TimePeriod mon12= new TimePeriod("mon12", 1, LocalTime.of(10, 0), LocalTime.of(11, 0));
+        //TimePeriod tue11 = new TimePeriod("tue11", 2, LocalTime.of(9, 0), LocalTime.of(10, 0));
+        //TimePeriod tue12 = new TimePeriod("tue12", 2, LocalTime.of(10, 0), LocalTime.of(11, 0));
 
 
 
@@ -224,35 +227,48 @@ public class BusinessController {
         Subject history = new Subject("history", "History", "HIST");
         history.setWeeklyAssignedHours(2);
         Subject chemistry = new Subject("chemistry", "Chemistry", "CHEM");
-        chemistry.setWeeklyAssignedHours(4);
+        chemistry.setWeeklyAssignedHours(2);
 
-
-        Teacher teacherAlice = new Teacher("AliceMP-pmon10-utue9", "Alice", "AL");
-        teacherAlice.setPossibleSubjects(List.of(math, physics));
-        teacherAlice.addPreferredTimePeriod(mon10);
-        teacherAlice.addUnPreferredTimePeriod(tue9);
-
-        Teacher teacherBob = new Teacher("BobMHC", "Bob", "BOB");
-        teacherBob.setPossibleSubjects(List.of(math, history, chemistry));
-        teacherBob.setPreferredSubjects(List.of(chemistry));
-
-        Teacher teacherCarol = new Teacher("CarolMH-ptue9-ptue10", "Carol", "CAR");
-        teacherCarol.setPossibleSubjects(List.of(math, history));
-        teacherCarol.addPreferredTimePeriod(mon12);
-        teacherCarol.addPreferredTimePeriod(tue10);
 
         Classroom room101 = new Classroom("room101-10", "Room 101", "1");
         room101.setCapacity(10);
         Classroom room102 = new Classroom("room102", "Room 102", " 2");
         Classroom room103 = new Classroom("room103", "Room 103", "3");
         Classroom room104= new Classroom("room104-M", "Room 104", "4");
-        room104.setAssignedSubjects(List.of(math));
-        math.setAssignedClassroom(room104);
+        //room104.setAssignedSubjects(List.of(math));
+        //math.setAssignedClassroom(room104);
 
         StudentGroup grade9 = new StudentGroup("grade9-MHP", "Grade 9", "1");
         grade9.setRequiredSubjects(List.of(math, history, physics));
         StudentGroup grade10 = new StudentGroup("grade10-MC", "Grade 10", "2");
         grade10.setRequiredSubjects(List.of(math, chemistry));
+
+
+        Teacher teacherAlice = new Teacher("AliceMP-pmon10-utue9", "Alice", "AL");
+        teacherAlice.setPossibleSubjects(List.of(math, physics, chemistry, history));
+        teacherAlice.addPreferredTimePeriod(tue9, 1);
+
+
+        //teacherAlice.addUnPreferredTimePeriod(tue9);
+
+        //teacherAlice.setPreferredStudentGroups(List.of(grade10));
+        teacherAlice.setHoursWork(5);
+        teacherAlice.addUnPreferredTimePeriod(mon9, 1);
+
+
+        Teacher teacherBob = new Teacher("BobMHC", "Bob", "BOB");
+        teacherBob.setPossibleSubjects(List.of(math, physics, history, chemistry));
+        //teacherBob.setPreferredSubjects(List.of(chemistry));
+        teacherBob.addPreferredTimePeriod(mon9, 1);
+
+
+        Teacher teacherCarol = new Teacher("CarolMH-ptue9-ptue10", "Carol", "CAR");
+        teacherCarol.setPossibleSubjects(List.of(math, physics, history, chemistry));
+        teacherCarol.addUnPreferredTimePeriod(tue9, 1);
+        teacherCarol.addUnPreferredTimePeriod(tue10,1);
+        teacherCarol.addPreferredTimePeriod(mon9, 1);
+        //teacherCarol.setPreferredStudentGroups(List.of(grade10));
+        teacherCarol.setHoursWork(5);
 
 
 
@@ -264,7 +280,7 @@ public class BusinessController {
         teachers = new ArrayList<>(List.of(teacherAlice, teacherBob, teacherCarol));
         classrooms = new ArrayList<>(List.of(room101, room102, room103, room104));
         studentGroups = new ArrayList<>(List.of(grade9, grade10));
-        timePeriods = new ArrayList<>(List.of(mon9, mon10, tue9, tue10, mon11, mon12, tue11, tue12));
+        timePeriods = new ArrayList<>(List.of(mon9, mon10, tue9, tue10, mon11));
         subjects = new ArrayList<>(List.of(math, physics, history, chemistry));
 
         //createExampleData();
@@ -279,9 +295,12 @@ public class BusinessController {
         ScheduleSolver scheduleSolver = new ScheduleSolver(teachers, classrooms, studentGroups, timePeriods);
         List<Schedule> generatedSchedules = scheduleSolver.createSchedule();
         for (Schedule generatedSchedule : generatedSchedules) {
+            System.out.println("Generated Schedule:");
 
             if (generatedSchedule != null) {
                 generatedSchedule.printSchedule();
+                generatedSchedule.calculateConditions(teachers);
+
             } else {
                 System.out.println("Failed to generate a schedule.");
             }

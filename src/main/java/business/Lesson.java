@@ -4,13 +4,13 @@ import org.chocosolver.solver.variables.IntVar;
 
 public class Lesson {
 
-    private int teacher;
-    private int studentGroup;
-    private int classroom;
-    private int timePeriod;
-    private int subject;
+    private Teacher teacher;
+    private StudentGroup studentGroup;
+    private Classroom classroom;
+    private TimePeriod timePeriod;
+    private Subject subject;
 
-    public Lesson(int teacher, int studentGroup, int classroom, int timePeriod, int subject) {
+    public Lesson(Teacher teacher, StudentGroup studentGroup, Classroom classroom, TimePeriod timePeriod, Subject subject) {
         this.teacher = teacher;
         this.studentGroup = studentGroup;
         this.classroom = classroom;
@@ -18,43 +18,43 @@ public class Lesson {
         this.subject = subject;
     }
 
-    public int getTeacher() {
+    public Teacher getTeacher() {
         return teacher;
     }
 
-    public void setTeacher(int teacher) {
+    public void setTeacher(Teacher teacher) {
         this.teacher = teacher;
     }
 
-    public int getStudentGroup() {
+    public StudentGroup getStudentGroup() {
         return studentGroup;
     }
 
-    public void setStudentGroup(int studentGroup) {
+    public void setStudentGroup(StudentGroup studentGroup) {
         this.studentGroup = studentGroup;
     }
 
-    public int getClassroom() {
+    public Classroom getClassroom() {
         return classroom;
     }
 
-    public void setClassroom(int classroom) {
+    public void setClassroom(Classroom classroom) {
         this.classroom = classroom;
     }
 
-    public int getTimePeriod() {
+    public TimePeriod getTimePeriod() {
         return timePeriod;
     }
 
-    public void setTimePeriod(int timePeriod) {
+    public void setTimePeriod(TimePeriod timePeriod) {
         this.timePeriod = timePeriod;
     }
 
-    public int getSubject() {
+    public Subject getSubject() {
         return subject;
     }
 
-    public void setSubject(int subject) {
+    public void setSubject(Subject subject) {
         this.subject = subject;
     }
 }

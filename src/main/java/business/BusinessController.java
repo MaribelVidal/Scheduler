@@ -213,7 +213,7 @@ public class BusinessController {
         TimePeriod tue10 = new TimePeriod("tue10", "Martes", LocalTime.of(10, 0), LocalTime.of(11, 0));
         TimePeriod mon11 = new TimePeriod("mon11", "Lunes", LocalTime.of(9, 0), LocalTime.of(10, 0));
         //TimePeriod mon12= new TimePeriod("mon12", 1, LocalTime.of(10, 0), LocalTime.of(11, 0));
-        //TimePeriod tue11 = new TimePeriod("tue11", 2, LocalTime.of(9, 0), LocalTime.of(10, 0));
+        TimePeriod tue11 = new TimePeriod("tue11", "Martes", LocalTime.of(11, 0), LocalTime.of(12, 0));
         //TimePeriod tue12 = new TimePeriod("tue12", 2, LocalTime.of(10, 0), LocalTime.of(11, 0));
 
 
@@ -227,7 +227,8 @@ public class BusinessController {
         Subject history = new Subject("history", "History", "HIST");
         history.setWeeklyAssignedHours(2);
         Subject chemistry = new Subject("chemistry", "Chemistry", "CHEM");
-        chemistry.setWeeklyAssignedHours(2);
+        chemistry.setWeeklyAssignedHours(3);
+        chemistry.setMaxDailyHours(2);
 
 
         Classroom room101 = new Classroom("room101-10", "Room 101", "1");
@@ -241,7 +242,7 @@ public class BusinessController {
         StudentGroup grade9 = new StudentGroup("grade9-MHP", "Grade 9", "1");
         grade9.setRequiredSubjects(List.of(math, history, physics));
         StudentGroup grade10 = new StudentGroup("grade10-MC", "Grade 10", "2");
-        grade10.setRequiredSubjects(List.of(math, chemistry));
+        grade10.setRequiredSubjects(List.of(chemistry));
 
 
         Teacher teacherAlice = new Teacher("AliceMP-pmon10-utue9", "Alice", "AL");
@@ -253,7 +254,7 @@ public class BusinessController {
 
         //teacherAlice.setPreferredStudentGroups(List.of(grade10));
         teacherAlice.setHoursWork(5);
-        teacherAlice.addUnPreferredTimePeriod(mon9, 1);
+        teacherAlice.addUnPreferredTimePeriod(mon9, 2);
 
 
         Teacher teacherBob = new Teacher("BobMHC", "Bob", "BOB");
@@ -264,8 +265,8 @@ public class BusinessController {
 
         Teacher teacherCarol = new Teacher("CarolMH-ptue9-ptue10", "Carol", "CAR");
         teacherCarol.setPossibleSubjects(List.of(math, physics, history, chemistry));
-        teacherCarol.addUnPreferredTimePeriod(tue9, 1);
-        teacherCarol.addUnPreferredTimePeriod(tue10,1);
+        teacherCarol.addUnPreferredTimePeriod(tue9, 2);
+        teacherCarol.addUnPreferredTimePeriod(tue10,2);
         teacherCarol.addPreferredTimePeriod(mon9, 1);
         //teacherCarol.setPreferredStudentGroups(List.of(grade10));
         teacherCarol.setHoursWork(5);
@@ -280,7 +281,7 @@ public class BusinessController {
         teachers = new ArrayList<>(List.of(teacherAlice, teacherBob, teacherCarol));
         classrooms = new ArrayList<>(List.of(room101, room102, room103, room104));
         studentGroups = new ArrayList<>(List.of(grade9, grade10));
-        timePeriods = new ArrayList<>(List.of(mon9, mon10, tue9, tue10, mon11));
+        timePeriods = new ArrayList<>(List.of(mon9, mon10, tue9, tue10, mon11, tue11));
         subjects = new ArrayList<>(List.of(math, physics, history, chemistry));
 
         //createExampleData();

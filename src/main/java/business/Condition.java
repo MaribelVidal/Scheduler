@@ -1,6 +1,7 @@
 package business;
 
 public class Condition {
+    public  String ConditionType;
     private Teacher teacher;
     private int weight;
 
@@ -18,6 +19,7 @@ public class Condition {
         this.subject = dummySubject;
         this.timePeriod = dummyTimePeriod;
         this.studentGroup = dummyStudentGroup;
+        this.ConditionType = "None";
     }
 
     public Condition (Teacher teacher, int weight, Subject subject) {
@@ -26,6 +28,7 @@ public class Condition {
         this.subject = subject;
         this.timePeriod = dummyTimePeriod;
         this.studentGroup = dummyStudentGroup;
+        this.ConditionType = "Subject";
     }
 
     public Condition (Teacher teacher, int weight, TimePeriod timePeriod) {
@@ -34,6 +37,7 @@ public class Condition {
         this.subject = dummySubject;
         this.timePeriod = timePeriod;
         this.studentGroup = dummyStudentGroup;
+        this.ConditionType = "TimePeriod";
 
     }
 
@@ -43,6 +47,7 @@ public class Condition {
         this.subject = dummySubject;
         this.timePeriod = dummyTimePeriod;
         this.studentGroup = studentGroup    ;
+        this.ConditionType = "StudentGroup";
     }
 
 
@@ -85,5 +90,9 @@ public class Condition {
 
     public void setStudentGroup(StudentGroup studentGroup) {
         this.studentGroup = studentGroup;
+    }
+
+    public String getType() {
+        return ConditionType;
     }
 }

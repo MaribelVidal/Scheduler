@@ -42,7 +42,7 @@ public class ScheduleSolver {
     /**
      * Constructor principal. Inicializa listas y modelo.
      */
-    public ScheduleSolver( List<Teacher> teachers, List<Classroom> classrooms, List<StudentGroup> studentGroups, List<TimePeriod> timePeriods)  {
+    public ScheduleSolver(List<Teacher> teachers, List<Classroom> classrooms, List<StudentGroup> studentGroups, List<TimePeriod> timePeriods) {
         this.teachers = teachers;
         this.classrooms = classrooms;
         this.studentGroups = studentGroups;
@@ -63,7 +63,7 @@ public class ScheduleSolver {
     /**
      * Crea las unidades a programar (ScheduledUnit) a partir de los grupos y sus asignaturas requeridas.
      */
-    public void createScheduleUnits(){
+    public void createScheduleUnits() {
         // A ScheduledUnit is a specific StudentGroup needing a specific Subject.
         List<ScheduledUnit> scheduledUnits = new ArrayList<>();
         int unitIdCounter = 0;
@@ -73,7 +73,7 @@ public class ScheduleSolver {
                     for (int i = 0; i < subj.getWeeklyAssignedHours(); i++) {
                         // Una unidad por cada hora semanal requerida
                         System.out.println("Creating unit for StudentGroup: " + sg.getId() + ", Subject: " + subj.getId() + ", Unit ID: " + unitIdCounter);
-                    scheduledUnits.add(new ScheduledUnit(sg, subj, unitIdCounter++));
+                        scheduledUnits.add(new ScheduledUnit(sg, subj, unitIdCounter++));
                     }
                 }
             }
@@ -90,13 +90,12 @@ public class ScheduleSolver {
         this.scheduledUnits = scheduledUnits;
 
 
-
     }
 
     /**
      * Define las variables de decisión del modelo para cada unidad.
      */
-    public void defineVariables(){
+    public void defineVariables() {
 
         this.unitTeacherVars = model.intVarArray("unit_teacher", numUnits, 0, numTeachers - 1);
         this.unitClassroomVars = model.intVarArray("unit_classroom", numUnits, 0, numClassrooms - 1);
@@ -107,7 +106,7 @@ public class ScheduleSolver {
     /**
      * Añade las restricciones duras al modelo (asignación válida de profesores, aulas, periodos, etc).
      */
-    public void addConstraints(){
+    public void addConstraints() {
 
         // 1 - Restricciones de asignación de profesores y periodos de tiempo posibles para el profesor
 
@@ -201,8 +200,8 @@ public class ScheduleSolver {
             }
 
             // Si la asignatura tiene aula asignada, fuerza su uso
-           Subject subject = currentUnit.getSubject();
-           Classroom assignedClassroom = subject.getAssignedClassroom();
+            Subject subject = currentUnit.getSubject();
+            Classroom assignedClassroom = subject.getAssignedClassroom();
             if (assignedClassroom != null) {
                 int index = -1;
                 for (int cIdx = 0; cIdx < numClassrooms; cIdx++) {
@@ -260,7 +259,6 @@ public class ScheduleSolver {
             }
 
 
-
         }
 
         // 4 - Restricciones de horas de trabajo de los profesores
@@ -294,16 +292,12 @@ public class ScheduleSolver {
                 model.scalar(unitsTaughtByTeacher, unitDurations, "<=", teacher.getHoursWork()).post();
             }
         }
-    /*
 
-    //Todo: añadir hard constraint de que una asignatura solo puede darse un máximo de horas por día ( y tienen que ser consecutivas)
 
         // 5 - Restricciones de horas de asignatura por día y consecutividad
-
-        // Para cada grupo y asignatura, limitar las horas por día y exigir consecutividad
         for (StudentGroup sg : studentGroups) {
             for (Subject subj : sg.getRequiredSubjects()) {
-                // Obtener los índices de unidades de este grupo y asignatura
+                // Obtener índices de unidades para esta combinación grupo-asignatura
                 List<Integer> unitIndices = new ArrayList<>();
                 for (int i = 0; i < numUnits; i++) {
                     ScheduledUnit unit = scheduledUnits.get(i);
@@ -311,52 +305,93 @@ public class ScheduleSolver {
                         unitIndices.add(i);
                     }
                 }
-                // Para cada día
-                Map<String, List<Integer>> unitsByDay = new HashMap<>();
-                for (int idx : unitIndices) {
-                    for (int tpIdx = 0; tpIdx < numTimePeriods; tpIdx++) {
-                        String day = timePeriods.get(tpIdx).getWeekday();
-                        unitsByDay.computeIfAbsent(day, k -> new ArrayList<>()).add(tpIdx);
-                    }
-                }
-                int maxHoursPerDay = subj.getMaxDailyHours(); // O el máximo permitido por día
-                for (String day : unitsByDay.keySet()) {
-                    List<Integer> timePeriodIndices = unitsByDay.get(day);
-                    // Variables booleanas: ¿la unidad está asignada a ese periodo?
-                    List<BoolVar> assignedVars = new ArrayList<>();
-                    for (int idx : unitIndices) {
-                        for (int tpIdx : timePeriodIndices) {
-                            BoolVar isAssigned = model.boolVar("unit_" + idx + "_tp_" + tpIdx);
-                            model.arithm(unitTimePeriodVars[idx], "=", tpIdx).reifyWith(isAssigned);
-                            assignedVars.add(isAssigned);
-                        }
-                    }
-                    // Suma de unidades por día <= máximo permitido
-                    model.sum(assignedVars.toArray(new BoolVar[0]), "<=", maxHoursPerDay).post();
 
-                    // Consecutividad: si hay más de una unidad, los periodos deben ser consecutivos
-                    if (unitIndices.size() > 1) {
-                        for (int k = 0; k < unitIndices.size() - 1; k++) {
-                            int idxA = unitIndices.get(k);
-                            int idxB = unitIndices.get(k + 1);
-                            // Si ambas unidades están asignadas ese día, deben ser consecutivas
-                            model.ifThen(
-                                    model.and(
-                                            model.arithm(unitTimePeriodVars[idxA], ">=", 0), // Puedes ajustar la condición si tienes una variable booleana de asignación
-                                            model.arithm(unitTimePeriodVars[idxB], ">=", 0)
-                                    ),
-                                    model.arithm(unitTimePeriodVars[idxB], "=", model.intOffsetView(unitTimePeriodVars[idxA], 1))
-                            );
+                if (unitIndices.isEmpty()) continue;
+
+                // Agrupar periodos por día
+                Map<String, List<Integer>> tpByDay = new HashMap<>();
+                for (int tp = 0; tp < numTimePeriods; tp++) {
+                    String day = timePeriods.get(tp).getWeekday();
+                    tpByDay.computeIfAbsent(day, k -> new ArrayList<>()).add(tp);
+                }
+
+                // Restricciones por día
+                int maxHoursPerDay = subj.getMaxDailyHours() > 0 ? subj.getMaxDailyHours() : unitIndices.size();
+
+                for (String day : tpByDay.keySet()) {
+                    List<Integer> dayPeriods = tpByDay.get(day);
+
+                    // Para cada unidad, ¿está asignada a este día?
+                    List<BoolVar> unitsInThisDay = new ArrayList<>();
+                    for (int uIdx : unitIndices) {
+                        BoolVar isInDay = model.boolVar("unit_" + uIdx + "_in_day_" + day);
+
+                        // Array de BoolVars: unidad está en algún periodo de este día
+                        BoolVar[] inAnyPeriod = new BoolVar[dayPeriods.size()];
+                        for (int i = 0; i < dayPeriods.size(); i++) {
+                            int tp = dayPeriods.get(i);
+                            inAnyPeriod[i] = model.boolVar("unit_" + uIdx + "_tp_" + tp);
+                            model.arithm(unitTimePeriodVars[uIdx], "=", tp).reifyWith(inAnyPeriod[i]);
+                        }
+
+                        // La unidad está en este día si está en algún periodo del día
+                        model.max(isInDay, inAnyPeriod).post();
+                        unitsInThisDay.add(isInDay);
+                    }
+
+                    // Limitar unidades por día
+                    model.sum(unitsInThisDay.toArray(new BoolVar[0]), "<=", maxHoursPerDay).post();
+
+                    // Restricción de consecutividad
+                    if (dayPeriods.size() >= 2) {
+                        // Para cada par de unidades asignadas a este día
+                        for (int i = 0; i < unitIndices.size(); i++) {
+                            for (int j = i + 1; j < unitIndices.size(); j++) {
+                                int uIdxA = unitIndices.get(i);
+                                int uIdxB = unitIndices.get(j);
+
+                                // Si ambas unidades están en este día
+                                BoolVar bothInDay = model.boolVar("both_in_day_" + uIdxA + "_" + uIdxB);
+                                model.and(unitsInThisDay.get(i), unitsInThisDay.get(j)).reifyWith(bothInDay);
+
+                                // Si ambas están en el día, el periodo B debe ser el periodo A + 1
+                                model.ifThen(
+                                        bothInDay,
+                                        model.or(
+                                                model.arithm(unitTimePeriodVars[uIdxB], "=", model.intOffsetView(unitTimePeriodVars[uIdxA], 1)),
+                                                model.arithm(unitTimePeriodVars[uIdxA], "=", model.intOffsetView(unitTimePeriodVars[uIdxB], 1))
+                                        )
+                                );
+                            }
                         }
                     }
                 }
             }
-
-
         }
-*/
 
+        // 6 - Restricción de mismo profesor para todas las unidades de la misma asignatura y grupo
+        Map<String, List<Integer>> unitsByGroupSubject = new HashMap<>();
+
+// Agrupar unidades por combinación grupo-asignatura
+        for (int i = 0; i < numUnits; i++) {
+            ScheduledUnit unit = scheduledUnits.get(i);
+            String key = unit.getStudentGroup().getId() + "-" + unit.getSubject().getId();
+            unitsByGroupSubject.computeIfAbsent(key, k -> new ArrayList<>()).add(i);
+        }
+
+// Para cada grupo de unidades del mismo grupo-asignatura, forzar el mismo profesor
+        for (List<Integer> relatedUnits : unitsByGroupSubject.values()) {
+            if (relatedUnits.size() > 1) {
+                for (int i = 1; i < relatedUnits.size(); i++) {
+                    // La unidad actual debe tener el mismo profesor que la primera unidad del grupo
+                    int firstUnit = relatedUnits.get(0);
+                    int currentUnit = relatedUnits.get(i);
+                    model.arithm(unitTeacherVars[firstUnit], "=", unitTeacherVars[currentUnit]).post();
+                }
+            }
+        }
     }
+
 
     // SOFT CONSTRAINTS
 
@@ -365,6 +400,7 @@ public class ScheduleSolver {
      * Penaliza las asignaciones que no cumplen preferencias.
      */
 
+    /*
     public void addSoftConstraints(){
 
 
@@ -377,6 +413,9 @@ public class ScheduleSolver {
         // Paso 1: Definir la variable que acumulará la penalización total por preferencias de periodo de los profesores.
         // El rango es de 0 a numUnits, ya que como máximo todas las unidades pueden estar en periodos diferentes a los preferidos.
 
+        List<Condition> teacherPreferences = new ArrayList<>();
+        List<Condition> teacherUnPreferences = new ArrayList<>();
+
         IntVar totalPreferencePenalty = model.intVar("total_preference_penalty", 0, numUnits);
 
         // Paso 2: Comprobar que existen profesores, periodos y unidades antes de aplicar la restricción.
@@ -385,6 +424,10 @@ public class ScheduleSolver {
             Tuples preferredTeacherTimePeriodsPairs = new Tuples(true);
             for (int tIdx = 0; tIdx < numTeachers; tIdx++) {
                 Teacher teacher = teachers.get(tIdx);
+
+                teacherPreferences.addAll(teacher.getPreferredConditions());
+                teacherUnPreferences.addAll(teacher.getUnPreferredConditions());
+
                 List<TimePeriod> preferredTimePeriods = teacher.getPreferredTimePeriods();
                 // Paso 4: Para cada profesor, recorrer sus periodos preferidos y añadir la tupla (profesor, periodo) si corresponde.
                 if (!preferredTimePeriods.isEmpty()) {
@@ -641,6 +684,144 @@ public class ScheduleSolver {
 
 
 
+*/
+
+    public void addSoftConstraints() {
+        // Obtener todas las condiciones de preferencia/no preferencia
+        List<Condition> teacherPreferences = new ArrayList<>();
+        List<Condition> teacherUnPreferences = new ArrayList<>();
+
+        for (int tIdx = 0; tIdx < numTeachers; tIdx++) {
+            Teacher teacher = teachers.get(tIdx);
+            teacherPreferences.addAll(teacher.getPreferredConditions());
+            teacherUnPreferences.addAll(teacher.getUnPreferredConditions());
+        }
+
+        // Variables para almacenar las penalizaciones
+        List<IntVar> tpPreferencesPenalty = new ArrayList<>();
+        List<IntVar> tpUnPreferencesPenalty = new ArrayList<>();
+
+        // 1. Procesar las preferencias positivas (preferredConditions)
+        for (Condition condition : teacherPreferences) {
+            // Encontrar el índice del profesor
+            int teacherIdx = -1;
+            for (int i = 0; i < teachers.size(); i++) {
+                if (teachers.get(i).getId().equals(condition.getTeacher().getId())) {
+                    teacherIdx = i;
+                    break;
+                }
+            }
+
+            if (teacherIdx == -1) continue;
+
+            // Procesar según el tipo de condición
+            if (condition.getType() == "TimePeriod") {
+                // Encontrar el índice del periodo
+                int periodIdx = -1;
+                for (int i = 0; i < timePeriods.size(); i++) {
+                    if (timePeriods.get(i).getId().equals(condition.getTimePeriod().getId())) {
+                        periodIdx = i;
+                        break;
+                    }
+                }
+
+                if (periodIdx == -1) continue;
+
+                // Para cada unidad, añadir una penalización si no se cumple la preferencia
+                for (int unitIdx = 0; unitIdx < numUnits; unitIdx++) {
+                    IntVar penaltyVar = model.intVar("penalty_pref_tp_" + teacherIdx + "_" + periodIdx + "_" + unitIdx, 0, condition.getWeight());
+
+                    // Si la unidad está asignada a este profesor y NO está en el periodo preferido
+                    model.ifThenElse(
+                            model.and(
+                                    model.arithm(unitTeacherVars[unitIdx], "=", teacherIdx),
+                                    model.arithm(unitTimePeriodVars[unitIdx], "!=", periodIdx)
+                            ),
+                            model.arithm(penaltyVar, "=", condition.getWeight()),
+                            model.arithm(penaltyVar, "=", 0)
+                    );
+
+                    tpPreferencesPenalty.add(penaltyVar);
+                }
+            }
+            // Añadir procesamiento similar para asignaturas y grupos preferidos
+        }
+
+        // 2. Procesar las preferencias negativas (unPreferredConditions)
+        for (Condition condition : teacherUnPreferences) {
+            // Encontrar el índice del profesor
+            int teacherIdx = -1;
+            for (int i = 0; i < teachers.size(); i++) {
+                if (teachers.get(i).getId().equals(condition.getTeacher().getId())) {
+                    teacherIdx = i;
+                    break;
+                }
+            }
+
+            if (teacherIdx == -1) continue;
+
+            // Procesar según el tipo de condición
+            if (condition.getType() == "TimePeriod") {
+
+                // Encontrar el índice del periodo
+                int periodIdx = -1;
+                for (int i = 0; i < timePeriods.size(); i++) {
+                    if (timePeriods.get(i).getId().equals(condition.getTimePeriod().getId())) {
+                        periodIdx = i;
+                        break;
+                    }
+                }
+
+                if (periodIdx == -1) continue;
+
+                // Para cada unidad, añadir una penalización si se asigna al periodo no preferido
+                for (int unitIdx = 0; unitIdx < numUnits; unitIdx++) {
+                    IntVar penaltyVar = model.intVar("penalty_unpref_tp_" + teacherIdx + "_" + periodIdx + "_" + unitIdx, 0, condition.getWeight());
+
+                    // Si la unidad está asignada a este profesor Y está en el periodo NO preferido
+                    model.ifThenElse(
+                            model.and(
+                                    model.arithm(unitTeacherVars[unitIdx], "=", teacherIdx),
+                                    model.arithm(unitTimePeriodVars[unitIdx], "=", periodIdx)
+                            ),
+                            model.arithm(penaltyVar, "=", condition.getWeight()),
+                            model.arithm(penaltyVar, "=", 0)
+                    );
+
+                    tpUnPreferencesPenalty.add(penaltyVar);
+                }
+
+            }
+            // Añadir procesamiento similar para asignaturas y grupos no preferidos
+        }
+
+        IntVar totalTpPreferencesPenalty = model.intVar("totalTpPreferencesPenalty", 0, numUnits); // Asumiendo un peso máximo de 100
+        model.sum(tpPreferencesPenalty.toArray(new IntVar[0]), "=", totalTpPreferencesPenalty).post();
+        model.setObjective(Model.MINIMIZE, totalTpPreferencesPenalty);
+
+        IntVar totalTpUnPreferencesPenalty = model.intVar("totalTpUnPreferencesPenalty", 0, numUnits); // Asumiendo un peso máximo de 100
+        model.sum(tpUnPreferencesPenalty.toArray(new IntVar[0]), "=", totalTpUnPreferencesPenalty).post();
+        model.setObjective(Model.MINIMIZE, totalTpUnPreferencesPenalty);
+
+        // Crear variable para la suma total de penalizaciones
+        //IntVar totalPenalty = model.intVar("total_penalty", 0, weightedPenaltyVars.size() * 100); // Asumiendo un peso máximo de 100
+
+        // Sumar todas las penalizaciones
+        //model.sum(weightedPenaltyVars.toArray(new IntVar[0]), "=", totalPenalty).post();
+
+
+        // Establecer la función objetivo
+        //model.setObjective(Model.MINIMIZE, totalPenalty);
+    }
+
+
+
+
+
+
+
+
+
 
     private List<Schedule> solveModel(){
 
@@ -666,8 +847,8 @@ public class ScheduleSolver {
                     int classroomIdx = solution.getIntVal(unitClassroomVars[i]);
                     int timePeriodIdx = solution.getIntVal(unitTimePeriodVars[i]);
 
-                    int periodPenalty = solution.getIntVal(teacherPreferencesPenalty.get(i));
-                    int unPreferredPenalty = solution.getIntVal(teacherUnPreferencesPenalty.get(i));
+                    //int periodPenalty = solution.getIntVal(teacherPreferencesPenalty.get(i));
+                    //int unPreferredPenalty = solution.getIntVal(teacherUnPreferencesPenalty.get(i));
 
                     schedule.addAssignment(
                             scheduledUnits.get(i),
@@ -680,8 +861,8 @@ public class ScheduleSolver {
                             ", Penalización preferencia periodo: " + periodPenalty +
                             ", Penalización NO preferido: " + unPreferredPenalty);*/
 
-                    int penalty = calculatePenalty(solution);
-                    System.out.println("Total penalty for this solution: " + penalty);
+                    //int penalty = calculatePenalty(solution);
+                    //System.out.println("Total penalty for this solution: " + penalty);
 
                 }
 

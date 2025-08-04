@@ -2,14 +2,15 @@ package business;// generate csp solution for a schedule creator, knowing the va
 
 import org.chocosolver.solver.Model;
 import org.chocosolver.solver.Solution;
-//import org.chocosolver.solver.constraints.extension.Tuples;
+import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.constraints.extension.Tuples;
+import org.chocosolver.solver.search.strategy.Search;
 import org.chocosolver.solver.variables.BoolVar;
 import org.chocosolver.solver.variables.IntVar;
 
-import java.time.LocalTime;
+
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * ScheduleSolver se encarga de modelar y resolver el problema de horarios usando Choco Solver.
@@ -38,6 +39,8 @@ public class ScheduleSolver {
     private IntVar[] unitTimePeriodVars;
     private List<BoolVar> teacherPreferencesPenalty; // Penalizaciones por preferencias de profesores
     private List<BoolVar> teacherUnPreferencesPenalty; // Penalizaciones por no preferencias de profesores
+
+    private IntVar totalScore;
 
     /**
      * Constructor principal. Inicializa listas y modelo.
@@ -72,7 +75,7 @@ public class ScheduleSolver {
                 for (Subject subj : sg.getRequiredSubjects()) {
                     for (int i = 0; i < subj.getWeeklyAssignedHours(); i++) {
                         // Una unidad por cada hora semanal requerida
-                        System.out.println("Creating unit for StudentGroup: " + sg.getId() + ", Subject: " + subj.getId() + ", Unit ID: " + unitIdCounter);
+                        //System.out.println("Creating unit for StudentGroup: " + sg.getId() + ", Subject: " + subj.getId() + ", Unit ID: " + unitIdCounter);
                         scheduledUnits.add(new ScheduledUnit(sg, subj, unitIdCounter++));
                     }
                 }
@@ -393,506 +396,235 @@ public class ScheduleSolver {
     }
 
 
-    // SOFT CONSTRAINTS
-
-    /**
-     * Añade restricciones blandas (preferencias de profesores por periodos, asignaturas, grupos, etc).
-     * Penaliza las asignaciones que no cumplen preferencias.
-     */
-
-    /*
-    public void addSoftConstraints(){
-
-
-        // A - Preferencias de periodos de los profesores
-
-        //Gestiona la penalización por asignar unidades a periodos preferidos por los profesores.
-        //La penalización se suma si la asignación no coincide con los periodos preferidos
-        //Se minimiza en la función objetivo.
-
-        // Paso 1: Definir la variable que acumulará la penalización total por preferencias de periodo de los profesores.
-        // El rango es de 0 a numUnits, ya que como máximo todas las unidades pueden estar en periodos diferentes a los preferidos.
-
-        List<Condition> teacherPreferences = new ArrayList<>();
-        List<Condition> teacherUnPreferences = new ArrayList<>();
-
-        IntVar totalPreferencePenalty = model.intVar("total_preference_penalty", 0, numUnits);
-
-        // Paso 2: Comprobar que existen profesores, periodos y unidades antes de aplicar la restricción.
-        if (numTeachers > 0 && numTimePeriods > 0 && numUnits > 0) {
-            // Paso 3: Crear la estructura Tuples para almacenar los pares (profesor, periodo preferido).
-            Tuples preferredTeacherTimePeriodsPairs = new Tuples(true);
-            for (int tIdx = 0; tIdx < numTeachers; tIdx++) {
-                Teacher teacher = teachers.get(tIdx);
-
-                teacherPreferences.addAll(teacher.getPreferredConditions());
-                teacherUnPreferences.addAll(teacher.getUnPreferredConditions());
-
-                List<TimePeriod> preferredTimePeriods = teacher.getPreferredTimePeriods();
-                // Paso 4: Para cada profesor, recorrer sus periodos preferidos y añadir la tupla (profesor, periodo) si corresponde.
-                if (!preferredTimePeriods.isEmpty()) {
-                    for (int tpIdx = 0; tpIdx < numTimePeriods; tpIdx++) {
-                        System.out.println("Checking teacher " + teacher.getId() + " for preferred time period " + timePeriods.get(tpIdx).getId());
-                        TimePeriod timePeriod = timePeriods.get(tpIdx);
-                        if (preferredTimePeriods.contains(timePeriod)) {
-                            System.out.println("Teacher " + teacher.getId() + " prefers time period " + timePeriod.getId());
-                            preferredTeacherTimePeriodsPairs.add(tIdx, tpIdx);
-                            System.out.println(preferredTeacherTimePeriodsPairs);
-                        }
-
-                    }
-                }
-
-            }
-
-            // Paso 5: Para cada unidad a programar, crear una variable booleana que indica si la asignación cumple la preferencia.
-            for (int i = 0; i < numUnits; i++) {
-                BoolVar prefersTimePeriod = model.boolVar("prefers_time_period_" + i);
-                teacherPreferencesPenalty.add(prefersTimePeriod);
-
-                // Paso 6: Si existen tuplas de preferencia, usar una restricción condicional:
-                // Si la asignación (profesor, periodo) está en las tuplas preferidas, la penalización es 0.
-                // Si no, la penalización es 1.
-                if (preferredTeacherTimePeriodsPairs.nbTuples() != 0) {
-                    model.ifThenElse(
-                            model.table(new IntVar[]{unitTeacherVars[i], unitTimePeriodVars[i]}, preferredTeacherTimePeriodsPairs),
-                            model.arithm(prefersTimePeriod, "=", 0),
-                            model.arithm(prefersTimePeriod, "=", 1)
-                    );
-                } else {
-                    // Paso 7: Si no hay preferencias definidas, la penalización es 0 por defecto.
-                    model.arithm(prefersTimePeriod, "=", 0).post();
-                }
-            }
-
-            // Paso 8: Sumar todas las penalizaciones individuales en la variable totalPreferencePenalty.
-            model.sum(teacherPreferencesPenalty.toArray(new BoolVar[0]), "=", totalPreferencePenalty).post();
-
-            // Paso 9: Definir la función objetivo del modelo para minimizar la penalización total por preferencias de periodo.
-            model.setObjective(Model.MINIMIZE, totalPreferencePenalty);// Set the objective to maximize the total preference penalty
-        } else {
-            // Paso 10: Si faltan datos, mostrar error y no aplicar la restricción.
-            System.err.println("Error: No teachers, time periods, or units defined. Cannot add soft constraints.");
-
-        }
-
-        // B - Rechazo (no deseo) de periodos de los profesores
-
-        if (numTeachers > 0 && numTimePeriods > 0 && numUnits > 0) {
-            // Use the predefined pairs of allowed teacher-time period combinations
-            Tuples unPreferredTeacherTimePeriodsPairs = new Tuples(true);
-            for (int tIdx = 0; tIdx < numTeachers; tIdx++) {
-                Teacher teacher = teachers.get(tIdx);
-                List<TimePeriod> unPreferredTimePeriods = teacher.getUnPreferredTimePeriods();
-                if (!unPreferredTimePeriods.isEmpty()) {
-                    for (int tpIdx = 0; tpIdx < numTimePeriods; tpIdx++) {
-                        TimePeriod timePeriod = timePeriods.get(tpIdx);
-                        if (unPreferredTimePeriods.contains(timePeriod)) {
-                            System.out.println("Teacher " + teacher.getId() + " does not prefer time period " + timePeriod.getId());
-                            // If the teacher prefers this time period, allow this pair
-                            unPreferredTeacherTimePeriodsPairs.add(tIdx, tpIdx);
-                        }
-
-                    }
-                }
-
-            }
-
-
-
-            for (int i = 0; i < numUnits; i++) {
-                BoolVar unPrefersTimePeriod = model.boolVar("doesnot_prefers_time_period_" + i);
-                teacherUnPreferencesPenalty.add(unPrefersTimePeriod);
-                if (unPreferredTeacherTimePeriodsPairs.nbTuples() != 0) {
-                    // If the teacher prefers the time period for this unit, set the penalty to 0
-                    model.ifThenElse(
-                            model.table(new IntVar[]{unitTeacherVars[i], unitTimePeriodVars[i]}, unPreferredTeacherTimePeriodsPairs),
-                            model.arithm(unPrefersTimePeriod, "=", 2), model.arithm(unPrefersTimePeriod, "=", 0)
-                    );
-                } else {
-                    // If no preferences are defined, we assume no penalty
-                    model.arithm(unPrefersTimePeriod, "=", 0).post();
-                }
-            }
-            IntVar totalUnPreferencePenalty = model.intVar("total_unpreference_penalty", 0, numUnits);
-            model.sum(teacherUnPreferencesPenalty.toArray(new BoolVar[0]), "=", totalUnPreferencePenalty).post();
-
-            //IntVar totalPenalty = model.intVar("total_penalty", 0, numUnits * 2);
-            //model.arithm(totalPreferencePenalty, "+", totalUnPreferencePenalty, "=", totalPenalty).post();
-            model.setObjective(Model.MINIMIZE, totalUnPreferencePenalty);
-        } else {
-            System.err.println("Error: No teachers, time periods, or units defined. Cannot add soft constraints.");
-
-        }
-
-        // Preferencias de profesores por asignaturas
-
-        if (numTeachers > 0 && numUnits > 0) {
-            // Paso 1: Crear un mapeo de subjectId (String) a índice (int)
-            List<Subject> allSubjects = teachers.stream()
-                    .flatMap(t -> t.getPossibleSubjects().stream())
-                    .distinct()
-                    .collect(Collectors.toList());
-            Map<String, Integer> subjectIdToIndex = new HashMap<>();
-            for (int idx = 0; idx < allSubjects.size(); idx++) {
-                subjectIdToIndex.put(allSubjects.get(idx).getId(), idx);
-            }
-
-            Tuples preferredTeacherSubjectPairs = new Tuples(true);
-            // Construir los pares (profesor, asignatura preferida)
-            for (int tIdx = 0; tIdx < numTeachers; tIdx++) {
-                Teacher teacher = teachers.get(tIdx);
-                List<Subject> preferredSubjects = teacher.getPreferredSubjects();
-                for (Subject subj : teacher.getPreferredSubjects()) {
-                    Integer subjIdx = subjectIdToIndex.get(subj.getId());
-                    if (subjIdx != null) {
-                        preferredTeacherSubjectPairs.add(tIdx, subjIdx);
-                    }
-                }
-            }
-
-            List<BoolVar> teacherSubjectPreferencePenalty = new ArrayList<>();
-
-            for (int i = 0; i < numUnits; i++) {
-                ScheduledUnit unit = scheduledUnits.get(i);
-                int subjectIdx = subjectIdToIndex.get(unit.getSubject().getId());                BoolVar prefersSubject = model.boolVar("prefers_subject_" + i);
-                teacherSubjectPreferencePenalty.add(prefersSubject);
-
-                if (preferredTeacherSubjectPairs.nbTuples() != 0) {
-                    model.ifThenElse(
-                            model.table(new IntVar[]{unitTeacherVars[i], model.intVar(subjectIdx)}, preferredTeacherSubjectPairs),
-                            model.arithm(prefersSubject, "=", 0),
-                            model.arithm(prefersSubject, "=", 1)
-                    );
-                } else {
-                    model.arithm(prefersSubject, "=", 0).post();
-                }
-            }
-
-            IntVar totalSubjectPreferencePenalty = model.intVar("total_subject_preference_penalty", 0, numUnits);
-            model.sum(teacherSubjectPreferencePenalty.toArray(new BoolVar[0]), "=", totalSubjectPreferencePenalty).post();
-            // Puedes añadir totalSubjectPreferencePenalty a la función objetivo si lo deseas
-        } else {
-            System.err.println("Error: No teachers or units defined. Cannot add subject preference soft constraints.");
-        }
-
-
-        // Preferencias de profesores por grupos de alumnos
-
-        if (numTeachers > 0 && numUnits > 0) {
-            // Paso 1: Crear un mapeo de subjectId (String) a índice (int)
-            List<StudentGroup> allStudentGroups = studentGroups;
-            Map<String, Integer> studentGroupIdToIndex = new HashMap<>();
-            for (int idx = 0; idx < allStudentGroups.size(); idx++) {
-                studentGroupIdToIndex.put(allStudentGroups.get(idx).getId(), idx);
-            }
-
-            Tuples preferredTeacherStudentGroupPairs = new Tuples(true);
-            // Construir los pares (profesor, grupo preferido)
-            for (int tIdx = 0; tIdx < numTeachers; tIdx++) {
-                Teacher teacher = teachers.get(tIdx);
-
-                for (StudentGroup sg : teacher.getPreferredStudentGroups()) {
-                    Integer studentGroupIdx = studentGroupIdToIndex.get(sg.getId());
-                    if (studentGroupIdx != null) {
-                        preferredTeacherStudentGroupPairs.add(tIdx, studentGroupIdx);
-                    }
-                }
-            }
-
-            List<BoolVar> teacherStudentGroupPreferencePenalty = new ArrayList<>();
-
-            for (int i = 0; i < numUnits; i++) {
-                ScheduledUnit unit = scheduledUnits.get(i);
-                int studentGroupIdx = studentGroupIdToIndex.get(unit.getStudentGroup().getId());
-                BoolVar prefersStudentGroup = model.boolVar("prefers_studentGroup_" + i);
-                teacherStudentGroupPreferencePenalty.add(prefersStudentGroup);
-
-                if (preferredTeacherStudentGroupPairs.nbTuples() != 0) {
-                    model.ifThenElse(
-                            model.table(new IntVar[]{unitTeacherVars[i], model.intVar(studentGroupIdx)}, preferredTeacherStudentGroupPairs),
-                            model.arithm(prefersStudentGroup, "=", 0),
-                            model.arithm(prefersStudentGroup, "=", 1)
-                    );
-                } else {
-                    model.arithm(prefersStudentGroup, "=", 0).post();
-                }
-            }
-
-            IntVar totalStudentGroupPreferencePenalty = model.intVar("total_studentGroup_preference_penalty", 0, numUnits);
-            model.sum(teacherStudentGroupPreferencePenalty.toArray(new BoolVar[0]), "=", totalStudentGroupPreferencePenalty).post();
-            // Puedes añadir totalSubjectPreferencePenalty a la función objetivo si lo deseas
-        } else {
-            System.err.println("Error: No teachers or units defined. Cannot add studentGroup preference soft constraints.");
-        }
-    //Todo: NO preferencias por grupo
-
-        // Penalización de profesores por grupos de alumnos
-
-        if (numTeachers > 0 && numUnits > 0) {
-            // Paso 1: Crear un mapeo de subjectId (String) a índice (int)
-            List<StudentGroup> allStudentGroups = studentGroups;
-            Map<String, Integer> studentGroupIdToIndex = new HashMap<>();
-            for (int idx = 0; idx < allStudentGroups.size(); idx++) {
-                studentGroupIdToIndex.put(allStudentGroups.get(idx).getId(), idx);
-            }
-
-            Tuples unPreferredTeacherStudentGroupPairs = new Tuples(true);
-            // Construir los pares (profesor, grupo no)
-            for (int tIdx = 0; tIdx < numTeachers; tIdx++) {
-                Teacher teacher = teachers.get(tIdx);
-                List<StudentGroup> unPreferredStudentGroups = teacher.getUnPreferredStudentGroups();
-                if (!unPreferredStudentGroups.isEmpty()) {
-                    for (StudentGroup sg : unPreferredStudentGroups) {
-                        Integer studentGroupIdx = studentGroupIdToIndex.get(sg.getId());
-                        if (studentGroupIdx != null) {
-                            unPreferredTeacherStudentGroupPairs.add(tIdx, studentGroupIdx);
-                        }
-                    }
-                }
-
-            }
-
-            List<BoolVar> teacherStudentGroupUnPreferencePenalty = new ArrayList<>();
-
-            for (int i = 0; i < numUnits; i++) {
-                ScheduledUnit unit = scheduledUnits.get(i);
-                int studentGroupIdx = studentGroupIdToIndex.get(unit.getStudentGroup().getId());
-                BoolVar unPrefersStudentGroup = model.boolVar("unprefers_studentGroup_" + i);
-                teacherStudentGroupUnPreferencePenalty.add(unPrefersStudentGroup);
-
-                if (unPreferredTeacherStudentGroupPairs.nbTuples() != 0) {
-                    model.ifThenElse(
-                            model.table(new IntVar[]{unitTeacherVars[i], model.intVar(studentGroupIdx)}, unPreferredTeacherStudentGroupPairs),
-                            model.arithm(unPrefersStudentGroup, "=", 1),
-                            model.arithm(unPrefersStudentGroup, "=", 0)
-                    );
-                } else {
-                    model.arithm(unPrefersStudentGroup, "=", 0).post();
-                }
-            }
-
-            IntVar totalStudentGroupUnPreferencePenalty = model.intVar("total_studentGroup_unPreference_penalty", 0, numUnits);
-            model.sum(teacherStudentGroupUnPreferencePenalty.toArray(new BoolVar[0]), "=", totalStudentGroupUnPreferencePenalty).post();
-            // Puedes añadir totalSubjectPreferencePenalty a la función objetivo si lo deseas
-        } else {
-            System.err.println("Error: No teachers or units defined. Cannot add studentGroup preference soft constraints.");
-        }
-    }
-
-
-
-
-
-*/
-
+    // Añade las restricciones soft basadas en las preferencias de los profesores
     public void addSoftConstraints() {
-        // Obtener todas las condiciones de preferencia/no preferencia
-        List<Condition> teacherPreferences = new ArrayList<>();
-        List<Condition> teacherUnPreferences = new ArrayList<>();
+        if (numTeachers == 0 || numTimePeriods == 0 || numUnits == 0) {
+            System.err.println("Error: No teachers, time periods, or units defined. Cannot add soft constraints.");
+            return;
+        }
+
+        List<IntVar> softScores = new ArrayList<>();
 
         for (int tIdx = 0; tIdx < numTeachers; tIdx++) {
             Teacher teacher = teachers.get(tIdx);
-            teacherPreferences.addAll(teacher.getPreferredConditions());
-            teacherUnPreferences.addAll(teacher.getUnPreferredConditions());
-        }
 
-        // Variables para almacenar las penalizaciones
-        List<IntVar> tpPreferencesPenalty = new ArrayList<>();
-        List<IntVar> tpUnPreferencesPenalty = new ArrayList<>();
+            List<Condition> preferredConditions = teacher.getPreferredConditions();
+            List<Condition> unPreferredConditions = teacher.getUnPreferredConditions();
 
-        // 1. Procesar las preferencias positivas (preferredConditions)
-        for (Condition condition : teacherPreferences) {
-            // Encontrar el índice del profesor
-            int teacherIdx = -1;
-            for (int i = 0; i < teachers.size(); i++) {
-                if (teachers.get(i).getId().equals(condition.getTeacher().getId())) {
-                    teacherIdx = i;
-                    break;
-                }
-            }
+            // === Preferred Time Periods ===
+            if (preferredConditions != null) {
+                for (Condition condition : preferredConditions) {
+                    TimePeriod period = condition.getTimePeriod();
+                    int weight = condition.getWeight();
+                    int periodIdx = timePeriods.indexOf(period);
 
-            if (teacherIdx == -1) continue;
+                    if (period != null && weight > 0 && periodIdx != -1) {
+                        BoolVar[] matches = new BoolVar[numUnits];
+                        for (int uIdx = 0; uIdx < numUnits; uIdx++) {
+                            matches[uIdx] = model.and(
+                                    model.arithm(unitTeacherVars[uIdx], "=", tIdx),
+                                    model.arithm(unitTimePeriodVars[uIdx], "=", periodIdx)
+                            ).reify();
+                        }
+                        BoolVar fulfilled = model.boolVar("fulfilled_pref_time_t" + tIdx + "_p" + periodIdx);
+                        model.max(fulfilled, matches).post();
 
-            // Procesar según el tipo de condición
-            if (condition.getType() == "TimePeriod") {
-                // Encontrar el índice del periodo
-                int periodIdx = -1;
-                for (int i = 0; i < timePeriods.size(); i++) {
-                    if (timePeriods.get(i).getId().equals(condition.getTimePeriod().getId())) {
-                        periodIdx = i;
-                        break;
+                        softScores.add(model.intScaleView(fulfilled, weight));
                     }
                 }
-
-                if (periodIdx == -1) continue;
-
-                // Para cada unidad, añadir una penalización si no se cumple la preferencia
-                for (int unitIdx = 0; unitIdx < numUnits; unitIdx++) {
-                    IntVar penaltyVar = model.intVar("penalty_pref_tp_" + teacherIdx + "_" + periodIdx + "_" + unitIdx, 0, condition.getWeight());
-
-                    // Si la unidad está asignada a este profesor y NO está en el periodo preferido
-                    model.ifThenElse(
-                            model.and(
-                                    model.arithm(unitTeacherVars[unitIdx], "=", teacherIdx),
-                                    model.arithm(unitTimePeriodVars[unitIdx], "!=", periodIdx)
-                            ),
-                            model.arithm(penaltyVar, "=", condition.getWeight()),
-                            model.arithm(penaltyVar, "=", 0)
-                    );
-
-                    tpPreferencesPenalty.add(penaltyVar);
-                }
-            }
-            // Añadir procesamiento similar para asignaturas y grupos preferidos
-        }
-
-        // 2. Procesar las preferencias negativas (unPreferredConditions)
-        for (Condition condition : teacherUnPreferences) {
-            // Encontrar el índice del profesor
-            int teacherIdx = -1;
-            for (int i = 0; i < teachers.size(); i++) {
-                if (teachers.get(i).getId().equals(condition.getTeacher().getId())) {
-                    teacherIdx = i;
-                    break;
-                }
             }
 
-            if (teacherIdx == -1) continue;
+            // === Unpreferred Time Periods ===
+            if (unPreferredConditions != null) {
+                for (Condition condition : unPreferredConditions) {
+                    TimePeriod period = condition.getTimePeriod();
+                    int weight = condition.getWeight();
+                    int periodIdx = timePeriods.indexOf(period);
 
-            // Procesar según el tipo de condición
-            if (condition.getType() == "TimePeriod") {
+                    if (period != null && weight > 0 && periodIdx != -1) {
+                        BoolVar[] violations = new BoolVar[numUnits];
+                        for (int uIdx = 0; uIdx < numUnits; uIdx++) {
+                            violations[uIdx] = model.and(
+                                    model.arithm(unitTeacherVars[uIdx], "=", tIdx),
+                                    model.arithm(unitTimePeriodVars[uIdx], "=", periodIdx)
+                            ).reify();
+                        }
+                        BoolVar violated = model.boolVar("violated_unpref_time_t" + tIdx + "_p" + periodIdx);
+                        model.max(violated, violations).post();
 
-                // Encontrar el índice del periodo
-                int periodIdx = -1;
-                for (int i = 0; i < timePeriods.size(); i++) {
-                    if (timePeriods.get(i).getId().equals(condition.getTimePeriod().getId())) {
-                        periodIdx = i;
-                        break;
+                        softScores.add(model.intScaleView(violated, -weight));
                     }
                 }
-
-                if (periodIdx == -1) continue;
-
-                // Para cada unidad, añadir una penalización si se asigna al periodo no preferido
-                for (int unitIdx = 0; unitIdx < numUnits; unitIdx++) {
-                    IntVar penaltyVar = model.intVar("penalty_unpref_tp_" + teacherIdx + "_" + periodIdx + "_" + unitIdx, 0, condition.getWeight());
-
-                    // Si la unidad está asignada a este profesor Y está en el periodo NO preferido
-                    model.ifThenElse(
-                            model.and(
-                                    model.arithm(unitTeacherVars[unitIdx], "=", teacherIdx),
-                                    model.arithm(unitTimePeriodVars[unitIdx], "=", periodIdx)
-                            ),
-                            model.arithm(penaltyVar, "=", condition.getWeight()),
-                            model.arithm(penaltyVar, "=", 0)
-                    );
-
-                    tpUnPreferencesPenalty.add(penaltyVar);
-                }
-
             }
-            // Añadir procesamiento similar para asignaturas y grupos no preferidos
+
+            // === Preferred Subjects ===
+            if (preferredConditions != null) {
+                for (Condition condition : preferredConditions) {
+                    Subject subject = condition.getSubject();
+                    int weight = condition.getWeight();
+                    if (subject != null && weight > 0) {
+                        BoolVar[] matches = new BoolVar[numUnits];
+                        for (int uIdx = 0; uIdx < numUnits; uIdx++) {
+                            if (!scheduledUnits.get(uIdx).getSubject().equals(subject)) {
+                                matches[uIdx] = model.boolVar(false);
+                            } else {
+                                matches[uIdx] = model.arithm(unitTeacherVars[uIdx], "=", tIdx).reify();
+                            }
+                        }
+                        BoolVar fulfilled = model.boolVar("fulfilled_pref_subj_t" + tIdx + "_s" + subject.getId());
+                        model.max(fulfilled, matches).post();
+
+                        softScores.add(model.intScaleView(fulfilled, weight));
+                    }
+                }
+            }
+
+            // === Unpreferred Subjects ===
+            if (unPreferredConditions != null) {
+                for (Condition condition : unPreferredConditions) {
+                    Subject subject = condition.getSubject();
+                    int weight = condition.getWeight();
+                    if (subject != null && weight > 0) {
+                        BoolVar[] violations = new BoolVar[numUnits];
+                        for (int uIdx = 0; uIdx < numUnits; uIdx++) {
+                            if (!scheduledUnits.get(uIdx).getSubject().equals(subject)) {
+                                violations[uIdx] = model.boolVar(false);
+                            } else {
+                                violations[uIdx] = model.arithm(unitTeacherVars[uIdx], "=", tIdx).reify();
+                            }
+                        }
+                        BoolVar violated = model.boolVar("violated_unpref_subj_t" + tIdx + "_s" + subject.getId());
+                        model.max(violated, violations).post();
+
+                        softScores.add(model.intScaleView(violated, -weight));
+                    }
+                }
+            }
+
+            // === Preferred Student Groups ===
+            if (preferredConditions != null) {
+                for (Condition condition : preferredConditions) {
+                    StudentGroup group = condition.getStudentGroup();
+                    int weight = condition.getWeight();
+                    if (group != null && weight > 0) {
+                        BoolVar[] matches = new BoolVar[numUnits];
+                        for (int uIdx = 0; uIdx < numUnits; uIdx++) {
+                            if (!scheduledUnits.get(uIdx).getStudentGroup().equals(group)) {
+                                matches[uIdx] = model.boolVar(false);
+                            } else {
+                                matches[uIdx] = model.arithm(unitTeacherVars[uIdx], "=", tIdx).reify();
+                            }
+                        }
+                        BoolVar fulfilled = model.boolVar("fulfilled_pref_group_t" + tIdx + "_g" + group.getId());
+                        model.max(fulfilled, matches).post();
+
+                        softScores.add(model.intScaleView(fulfilled, weight));
+                    }
+                }
+            }
+
+            // === Unpreferred Student Groups ===
+            if (unPreferredConditions != null) {
+                for (Condition condition : unPreferredConditions) {
+                    StudentGroup group = condition.getStudentGroup();
+                    int weight = condition.getWeight();
+                    if (group != null && weight > 0) {
+                        BoolVar[] violations = new BoolVar[numUnits];
+                        for (int uIdx = 0; uIdx < numUnits; uIdx++) {
+                            if (!scheduledUnits.get(uIdx).getStudentGroup().equals(group)) {
+                                violations[uIdx] = model.boolVar(false);
+                            } else {
+                                violations[uIdx] = model.arithm(unitTeacherVars[uIdx], "=", tIdx).reify();
+                            }
+                        }
+                        BoolVar violated = model.boolVar("violated_unpref_group_t" + tIdx + "_g" + group.getId());
+                        model.max(violated, violations).post();
+
+                        softScores.add(model.intScaleView(violated, -weight));
+                    }
+                }
+            }
         }
 
-        IntVar totalTpPreferencesPenalty = model.intVar("totalTpPreferencesPenalty", 0, numUnits); // Asumiendo un peso máximo de 100
-        model.sum(tpPreferencesPenalty.toArray(new IntVar[0]), "=", totalTpPreferencesPenalty).post();
-        model.setObjective(Model.MINIMIZE, totalTpPreferencesPenalty);
-
-        IntVar totalTpUnPreferencesPenalty = model.intVar("totalTpUnPreferencesPenalty", 0, numUnits); // Asumiendo un peso máximo de 100
-        model.sum(tpUnPreferencesPenalty.toArray(new IntVar[0]), "=", totalTpUnPreferencesPenalty).post();
-        model.setObjective(Model.MINIMIZE, totalTpUnPreferencesPenalty);
-
-        // Crear variable para la suma total de penalizaciones
-        //IntVar totalPenalty = model.intVar("total_penalty", 0, weightedPenaltyVars.size() * 100); // Asumiendo un peso máximo de 100
-
-        // Sumar todas las penalizaciones
-        //model.sum(weightedPenaltyVars.toArray(new IntVar[0]), "=", totalPenalty).post();
-
-
-        // Establecer la función objetivo
-        //model.setObjective(Model.MINIMIZE, totalPenalty);
+        if (!softScores.isEmpty()) {
+            int min = softScores.stream().mapToInt(IntVar::getLB).sum();
+            int max = softScores.stream().mapToInt(IntVar::getUB).sum();
+            this.totalScore = model.intVar("soft_score", min, max);
+            model.sum(softScores.toArray(new IntVar[0]), "=", totalScore).post();
+            model.setObjective(Model.MAXIMIZE, totalScore);
+        } else {
+            System.out.println("No soft constraints to optimize.");
+        }
     }
 
-
-
-
-
-
-
-
-
-
-    private List<Schedule> solveModel(){
-
-        List<Solution> solutions = new ArrayList<>();
-        for (int i = 0; i < 10; i++) { // Limiting to 10 solutions for performance
-            Solution solution = model.getSolver().findSolution();
-            if (solution != null) {
-                solutions.add(solution);
-            } else {
-                break; // No more solutions found
-            }
-        }
+    private List<Schedule> solveModel() {
         List<Schedule> schedules = new ArrayList<>();
-        for (Solution solution : solutions) {
 
+        // 1. Find the optimal score
+        IntVar scoreVar = totalScore;
+        Solution optimalSolution = model.getSolver().findOptimalSolution(scoreVar, Model.MAXIMIZE);
 
-            Schedule schedule = new Schedule(); // Your schedule representation
+        if (optimalSolution == null) {
+            System.out.println("No optimal solution found.");
+            return schedules;
+        }
 
-            if (solution != null) {
-                System.out.println("Solution found!");
-                for (int i = 0; i < numUnits; i++) {
-                    int teacherIdx = solution.getIntVal(unitTeacherVars[i]);
-                    int classroomIdx = solution.getIntVal(unitClassroomVars[i]);
-                    int timePeriodIdx = solution.getIntVal(unitTimePeriodVars[i]);
+        int bestScore = optimalSolution.getIntVal(scoreVar);
+        System.out.println("Best soft score found: " + bestScore);
 
-                    //int periodPenalty = solution.getIntVal(teacherPreferencesPenalty.get(i));
-                    //int unPreferredPenalty = solution.getIntVal(teacherUnPreferencesPenalty.get(i));
+        // 2. Reset solver and add randomness for diversity
+        Solver solver = model.getSolver();
+        solver.reset();
 
-                    schedule.addAssignment(
-                            scheduledUnits.get(i),
-                            teachers.get(teacherIdx),
-                            classrooms.get(classroomIdx),
-                            timePeriods.get(timePeriodIdx)
-                    );
-                    /*System.out.println("Unidad " + i + ": Profesor " + teachers.get(teacherIdx).getName() +
-                            ", Periodo " + timePeriods.get(timePeriodIdx).getId() +
-                            ", Penalización preferencia periodo: " + periodPenalty +
-                            ", Penalización NO preferido: " + unPreferredPenalty);*/
+        IntVar[] allVars = Stream.concat(
+                Stream.concat(Stream.of(unitTeacherVars), Stream.of(unitClassroomVars)),
+                Stream.of(unitTimePeriodVars)
+        ).toArray(IntVar[]::new);
 
-                    //int penalty = calculatePenalty(solution);
-                    //System.out.println("Total penalty for this solution: " + penalty);
+        solver.setSearch(Search.randomSearch(allVars, System.currentTimeMillis()));
 
-                }
+        int maxSolutions = 10;
+        int collected = 0;
 
+        while (solver.solve()) {
+            int currentScore = scoreVar.getValue();
+            if (currentScore < bestScore - maxSolutions) break;
 
-            } else {
-                System.out.println("No solution found.");
-                // For debugging, you can print solver statistics or the model:
-                // System.out.println(model.getSolver().getMeasures());
-                // System.out.println(model);
-                return null;
+            // Construct the schedule
+            Schedule schedule = new Schedule();
+            for (int i = 0; i < numUnits; i++) {
+                int teacherIdx = unitTeacherVars[i].getValue();
+                int classroomIdx = unitClassroomVars[i].getValue();
+                int timePeriodIdx = unitTimePeriodVars[i].getValue();
+
+                schedule.addAssignment(
+                        scheduledUnits.get(i),
+                        teachers.get(teacherIdx),
+                        classrooms.get(classroomIdx),
+                        timePeriods.get(timePeriodIdx)
+                );
             }
 
-            //return schedule;
             schedules.add(schedule);
+            System.out.println("Solution " + schedules.size() + ": soft score = " + currentScore);
+            collected++;
+            if (collected >= maxSolutions) break;
 
+            // Exclude this solution from future results
+            List<BoolVar> diffs = new ArrayList<>();
+            for (int i = 0; i < numUnits; i++) {
+                diffs.add(model.arithm(unitTeacherVars[i], "!=", unitTeacherVars[i].getValue()).reify());
+                diffs.add(model.arithm(unitClassroomVars[i], "!=", unitClassroomVars[i].getValue()).reify());
+                diffs.add(model.arithm(unitTimePeriodVars[i], "!=", unitTimePeriodVars[i].getValue()).reify());
+            }
+            model.or(diffs.toArray(new BoolVar[0])).post();
         }
+
         return schedules;
-
-
-
     }
-{}
-    private int calculatePenalty(Solution solution) {
-        int totalPenalty = 0;
-        for (int i = 0; i < numUnits; i++) {
-            totalPenalty += solution.getIntVal(teacherPreferencesPenalty.get(i));
-            totalPenalty += solution.getIntVal(teacherUnPreferencesPenalty.get(i));
-        }
-        return totalPenalty;
-    }
+
+
+
 
 
 

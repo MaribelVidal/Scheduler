@@ -1,7 +1,6 @@
 package business;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class Schedule {
     private List<String> assignments; // Example: storing assignments as strings
@@ -51,55 +50,67 @@ public class Schedule {
     }
 
     public void calculateConditions(List<Teacher> teachers) {
+        int totalAchieved = 0;
+        int totalWeighted = 0;
 
         for (Teacher teacher : teachers) {
-
             List<Condition> preferredConditions = teacher.getPreferredConditions();
             List<Condition> unPreferredConditions = teacher.getUnPreferredConditions();
 
-            int teacherAchievedConditions = unPreferredConditions.size();
-            int teacherWeightedConditions = 0;
+            int achieved = 0;
+            int weighted = 0;
+
+            // --- Preferred conditions: reward if fulfilled ---
+            for (Condition condition : preferredConditions) {
+                boolean matched = false;
+                for (Lesson lesson : lessons) {
+                    if (lesson.getTeacher().equals(teacher) &&
+                            condition.getTimePeriod() != null &&
+                            condition.getTimePeriod().equals(lesson.getTimePeriod())) {
+                        matched = true;
+                        break;
+                    }
+                }
+                if (matched) {
+                    achieved += 1;
+                    weighted += condition.getWeight();
+                }
+            }
+
+            // --- Unpreferred conditions: reward if avoided ---
             for (Condition condition : unPreferredConditions) {
-                teacherWeightedConditions += condition.getWeight();// Reiniciar el contador de condiciones cumplidas
-            }
-            for (Lesson lesson : lessons) {
-                for (Condition condition : preferredConditions) {
-                    if (condition.getTeacher().equals(lesson.getTeacher()) &&
-                            (condition.getSubject().equals(lesson.getSubject()) ||
-                                    condition.getTimePeriod().equals(lesson.getTimePeriod()) ||
-                                    condition.getStudentGroup().equals(lesson.getStudentGroup()))) {
-                        teacherAchievedConditions++;
-                        teacherWeightedConditions += condition.getWeight();
+                boolean violated = false;
+                for (Lesson lesson : lessons) {
+                    if (lesson.getTeacher().equals(teacher) &&
+                            condition.getTimePeriod() != null &&
+                            condition.getTimePeriod().equals(lesson.getTimePeriod())) {
+                        violated = true;
+                        break;
                     }
                 }
-                for (Condition condition : unPreferredConditions) {
-                    if (condition.getTeacher().equals(lesson.getTeacher()) &&
-                            (condition.getSubject().equals(lesson.getSubject()) ||
-                                    condition.getTimePeriod().equals(lesson.getTimePeriod()) ||
-                                    condition.getStudentGroup().equals(lesson.getStudentGroup()))) {
-                        teacherAchievedConditions--;
-                        teacherWeightedConditions -= condition.getWeight();// Aquí podrías manejar las condiciones no preferidas, por ejemplo, restando puntos
-                        // achievedConditions--; // Si se desea penalizar por condiciones no preferidas
-                    }
+                if (!violated) {
+                    achieved += 1;
+                    weighted += condition.getWeight();
                 }
-
-
-                // Ejemplo simple, se puede ajustar según la lógica real
             }
 
-            achievedConditions = this.achievedConditions + teacherAchievedConditions;
-            weightedConditions = this.weightedConditions + teacherWeightedConditions;
-            teacher.setAchievedConditions(teacherAchievedConditions);
-            teacher.setWeightedConditions(teacherWeightedConditions);
+            // --- Track totals ---
+            teacher.setAchievedConditions(achieved);
+            teacher.setWeightedConditions(weighted);
+
+            totalAchieved += achieved;
+            totalWeighted += weighted;
+
             System.out.println("Teacher: " + teacher.getId() +
-                    ", Achieved Conditions: " + teacherAchievedConditions +
-                    ", Weighted Conditions: " + teacherWeightedConditions);
-
-
-
-
+                    ", Achieved Conditions: " + achieved +
+                    ", Achieved Weighted Conditions: " + achieved +
+                    ", Total Conditions Defined: " + weighted);
         }
-        System.out.println("Total Achieved Conditions: " + achievedConditions);
-        System.out.println("Total Weighted Conditions: " + weightedConditions);
+
+        System.out.println("Total Achieved Weighted Conditions: " + totalAchieved);
+        System.out.println("Total Weighted Conditions: " + totalWeighted);
     }
+
+
+
 }

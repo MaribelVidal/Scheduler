@@ -48,6 +48,9 @@ public class Teacher extends Entity {
     //Todo soft Constraint asociada a los grupos de estudiantes no deseados.
     //Todo Controlar las Soft y Hard Constraints asociadas a horas de docencia asignadas, no a las horas máximas
 
+    private double percentageAchievedConditions; // Porcentaje de condiciones cumplidas
+    private double percentageWeightedConditions; // Porcentaje de condiciones ponderadas cumplidas
+
     /**
      * Constructor principal de Teacher.
      * @param id Identificador único
@@ -69,6 +72,8 @@ public class Teacher extends Entity {
         this.unPreferredStudentGroups = new ArrayList<>();
         this.preferredConditions = new ArrayList<>();
         this.unPreferredConditions = new ArrayList<>();
+        this.percentageAchievedConditions = 0.0;
+        this.percentageWeightedConditions = 0.0;
     }
 
     // Métodos getter y setter para los datos personales y preferencias
@@ -287,8 +292,18 @@ public class Teacher extends Entity {
         return achievedConditions;
     }
 
+    public double getPercentageAchievedConditions() {
+        return percentageAchievedConditions;
+    }
+
+    public double getPercentageWeightedConditions() {
+        return percentageWeightedConditions;
+    }
+
     public void setAchievedConditions(int achievedConditions) {
         this.achievedConditions = achievedConditions;
+        int totalConditions = preferredConditions.size() + unPreferredConditions.size();
+        this.percentageAchievedConditions = (double) achievedConditions / totalConditions * 100;
     }
 
     public int getWeightedConditions() {
@@ -297,5 +312,13 @@ public class Teacher extends Entity {
 
     public void setWeightedConditions(int weightedConditions) {
         this.weightedConditions = weightedConditions;
+        double totalWeightedConditions = 0.0;
+        for (Condition condition : preferredConditions) {
+            totalWeightedConditions += condition.getWeight();
+        }
+        for (Condition condition : unPreferredConditions) {
+            totalWeightedConditions += condition.getWeight();
+        }
+        this.percentageWeightedConditions = (double) weightedConditions / totalWeightedConditions * 100;
     }
 }

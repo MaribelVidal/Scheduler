@@ -6,9 +6,10 @@ public class Lesson {
 
     private Teacher teacher;
     private StudentGroup studentGroup;
+    private Subject subject;
     private Classroom classroom;
     private TimePeriod timePeriod;
-    private Subject subject;
+
 
     public Lesson(Teacher teacher, StudentGroup studentGroup, Classroom classroom, TimePeriod timePeriod, Subject subject) {
         this.teacher = teacher;

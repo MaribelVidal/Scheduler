@@ -9,12 +9,31 @@ public class Classroom extends Entity{
     private String classroomType; //dedicada o general
     private int capacity;
     private List<Subject> assignedSubjects; // Asignaturas asignadas a esta aula
-
+    private List<Schedule> schedules; // Horarios asignados a esta aula
 
     public Classroom(String id, String name, String abbreviation) {
         super(id, name, abbreviation);
         this.capacity = 30;
         this.assignedSubjects = new ArrayList<>();// Default capacity
+    }
+
+    public List<Schedule> getSchedules() {
+        return schedules;
+    }
+
+    public void setSchedules(List<Schedule> schedules) {
+        this.schedules = schedules;
+    }
+
+    public void addSchedule(Schedule schedule) {
+        if (this.schedules == null) {
+            this.schedules = new ArrayList<>();
+        }
+        this.schedules.add(schedule);
+    }
+
+    public Schedule getScheduleById(int Id){
+        return schedules.get(Id);
     }
 
     public String getClassroomType() {

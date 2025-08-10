@@ -31,6 +31,61 @@ public class BusinessController {
 */
     }
 
+    public List<String> getTeachersNames() {
+        return teachers.stream()
+                .map(Teacher::getName)
+                .toList();
+    }
+    public List<String> getClassroomsNames() {
+        return classrooms.stream()
+                .map(Classroom::getName)
+                .toList();
+    }
+
+    public List<String> getStudentGroupsNames() {
+        return studentGroups.stream()
+                .map(StudentGroup::getName)
+                .toList();
+    }
+
+    public List<String> getTPNames() {
+        List<String> tpNames = new ArrayList<>();
+        for (TimePeriod tp : timePeriods) {
+            if (tp.getWeekday() == "Monday") {
+                tpNames.add( tp.getInitialHour() + "-" + tp.getFinalHour());
+            }
+            else return tpNames;
+
+        }
+        return tpNames;
+
+    }
+
+    public Schedule getTeacherSchedule (String teacherId, int Id) {
+        Teacher teacher = teachers.stream()
+                .filter(t -> t.getId().equals(teacherId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Teacher not found"));
+        return teacher.getScheduleById(Id);
+    }
+
+    public Schedule getStudentGroupSchedule (String studentGroupId, int Id) {
+        StudentGroup studentGroup = studentGroups.stream()
+                .filter(sg -> sg.getId().equals(studentGroupId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Student group not found"));
+        return studentGroup.getScheduleById(Id);
+    }
+
+    public Schedule getClassroomSchedule (String classroomId, int Id) {
+        Classroom classroom = classrooms.stream()
+                .filter(c -> c.getId().equals(classroomId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Classroom not found"));
+        return classroom.getScheduleById(Id);
+    }
+
+
     private void getFromDataBase () throws Exception {
         teachers = persistenceController.getAll(Teacher.class);
         studentGroups = persistenceController.getAll(StudentGroup.class);
@@ -75,6 +130,7 @@ public class BusinessController {
         //this.solver = new ScheduleSolver(teachers, studentGroups, subjects, classrooms, timePeriods);
 
     }
+
 
     // Método para crear datos de ejemplo
     public void createExampleData() {

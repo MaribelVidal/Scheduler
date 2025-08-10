@@ -559,6 +559,9 @@ public class ScheduleSolver {
 
     private List<Schedule> solveModel() {
         List<Schedule> schedules = new ArrayList<>();
+        Map<Teacher, Schedule> teacherSchedules = new HashMap<>();
+        Map<Classroom, Schedule> classroomSchedules = new HashMap<>();
+        Map<StudentGroup, Schedule> studentGroupSchedules = new HashMap<>();
 
         // 1. Find the optimal score
         IntVar scoreVar = totalScore;
@@ -590,6 +593,28 @@ public class ScheduleSolver {
             int currentScore = scoreVar.getValue();
             if (currentScore < bestScore - maxSolutions) break;
 
+            //Crear un nuevo Schedule para cada profesor
+            teacherSchedules.clear(); // Limpiar horarios anteriores
+
+            // Inicializar un horario para cada profesor
+            for (Teacher teacher : teachers) {
+                teacherSchedules.put(teacher, new Schedule());
+            }
+
+            // Crear un horario para cada aula
+            classroomSchedules.clear(); // Limpiar horarios anteriores
+            for (Classroom classroom : classrooms) {
+                classroomSchedules.put(classroom, new Schedule());
+            }
+
+            // Crear un horario para cada grupo de estudiantes
+            studentGroupSchedules.clear(); // Limpiar horarios anteriores
+            for (StudentGroup studentGroup : studentGroups) {
+                studentGroupSchedules.put(studentGroup, new Schedule());
+            }
+
+
+
             // Construct the schedule
             Schedule schedule = new Schedule();
             for (int i = 0; i < numUnits; i++) {
@@ -597,18 +622,69 @@ public class ScheduleSolver {
                 int classroomIdx = unitClassroomVars[i].getValue();
                 int timePeriodIdx = unitTimePeriodVars[i].getValue();
 
+                Teacher teacher = teachers.get(teacherIdx);
+                Classroom classroom = classrooms.get(classroomIdx);
+                TimePeriod timePeriod = timePeriods.get(timePeriodIdx);
+                ScheduledUnit unit = scheduledUnits.get(i);
+
                 schedule.addAssignment(
                         scheduledUnits.get(i),
                         teachers.get(teacherIdx),
                         classrooms.get(classroomIdx),
                         timePeriods.get(timePeriodIdx)
                 );
+
+                // Añadir al horario individual del profesor
+                teacherSchedules.get(teacher).addAssignment(unit, teacher, classroom, timePeriod);
+
+                // Añadir al horario individual del aula
+                classroomSchedules.get(classroom).addAssignment(unit, teacher, classroom, timePeriod);
+
+                // Añadir al horario individual del grupo de estudiantes
+                studentGroupSchedules.get(unit.getStudentGroup()).addAssignment(unit, teacher, classroom, timePeriod);
             }
 
+
+
+
+
             schedules.add(schedule);
+
+            // Guardar los horarios individuales
+            for (Teacher teacher : teachers) {
+                Schedule teacherSchedule = teacherSchedules.get(teacher);
+                // Solo guardar si tiene asignaciones
+
+                    // Asignar el horario al profesor
+                    teacher.addSchedule(teacherSchedule);
+
+            }
+
+            for (Classroom classroom : classrooms) {
+                Schedule classroomSchedule = classroomSchedules.get(classroom);
+                // Solo guardar si tiene asignaciones
+
+                    // Asignar el horario al aula
+                    classroom.addSchedule(classroomSchedule);
+
+            }
+
+            for (StudentGroup studentGroup : studentGroups) {
+                Schedule studentGroupSchedule = studentGroupSchedules.get(studentGroup);
+                // Solo guardar si tiene asignaciones
+
+                    // Asignar el horario al grupo de estudiantes
+                    studentGroup.addSchedule(studentGroupSchedule);
+
+            }
+
+
+
+
             System.out.println("Solution " + schedules.size() + ": soft score = " + currentScore);
             collected++;
             if (collected >= maxSolutions) break;
+
 
             // Exclude this solution from future results
             List<BoolVar> diffs = new ArrayList<>();

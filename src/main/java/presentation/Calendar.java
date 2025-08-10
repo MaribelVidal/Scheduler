@@ -5,6 +5,8 @@
  */
 package presentation;
 
+import business.Schedule;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
@@ -13,6 +15,7 @@ import java.awt.*;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.List;
 
 public class Calendar extends JFrame {
     private JComboBox<String> categoryCombo;
@@ -34,33 +37,52 @@ public class Calendar extends JFrame {
     private final DefaultListModel<String> clasesModel = new DefaultListModel<>();
     private final DefaultListModel<String> alumnosModel = new DefaultListModel<>();
 
+    private String typeEntity;
+    private String nameEntity;
+    private String idEntity;
+    private int idSchedule;
+
+    //Todo: Hace falta poner el valor correcto de la entidad seleccionada
+
+
     /**
      * Constructor: inicializa la ventana y los componentes UI
      */
     public Calendar() {
         super("Calendario Semanal");
-        initData();
-        initUI();
+        //initData(teachersNames, classroomsNames, studentsGroupsNames);
+        //initUI();
     }
+
+
+    public void init(List<String> teachersNames, List<String> classroomsNames, List<String> studentsGroupsNames, List<String> tpNames) {
+        // Inicializar el mapa de datos con los nombres de ejemplo
+        initData(teachersNames, classroomsNames, studentsGroupsNames);
+        // Configurar la interfaz gráfica
+        initUI(tpNames);
+    }
+
 
     /**
      * Rellena el map de datos con valores de ejemplo
      */
-    private void initData() {
-        dataMap.put("Profesores", new String[]{"Prof. García", "Prof. López", "Prof. Martínez"});
-        dataMap.put("Clases",     new String[]{"Matemáticas", "Lengua", "Historia"});
-        dataMap.put("Alumnos",    new String[]{"Ana", "Luis", "Carlos"});
+
+
+    private void initData(List<String> teachersNames, List<String> classroomsNames, List<String> studentsGroupsNames) {
+        dataMap.put("Profesores", teachersNames.toArray(new String[0]));
+        dataMap.put("Aulas",     classroomsNames.toArray(new String[0]));
+        dataMap.put("Grupos de Alumnos",    studentsGroupsNames.toArray(new String[0]));
 
         // Inicializar modelos de lista
         for (String p : dataMap.get("Profesores")) profesoresModel.addElement(p);
-        for (String c : dataMap.get("Clases"))     clasesModel.addElement(c);
-        for (String a : dataMap.get("Alumnos"))    alumnosModel.addElement(a);
+        for (String c : dataMap.get("Aulas"))     clasesModel.addElement(c);
+        for (String a : dataMap.get("Grupos de Alumnos"))    alumnosModel.addElement(a);
     }
 
     /**
      * Configura la interfaz gráfica: paneles, tablas y listeners
      */
-    private void initUI() {
+    private void initUI(List<String> tpNames) {
         /*
         setLayout(new BorderLayout());
 
@@ -77,7 +99,7 @@ public class Calendar extends JFrame {
          */
 
         JTabbedPane tabs = new JTabbedPane();
-        tabs.addTab("Calendario", createCalendarPanel());
+        tabs.addTab("Horario", createCalendarPanel(tpNames));
         tabs.addTab("Profesores", createManagementPanel("Profesor", profesoresModel));
         tabs.addTab("Clases", createManagementPanel("Clase", clasesModel));
         tabs.addTab("Alumnos", createManagementPanel("Alumno", alumnosModel));
@@ -90,16 +112,16 @@ public class Calendar extends JFrame {
     }
 
     /** Crea el panel del calendario con selector y tabla */
-    private JPanel createCalendarPanel() {
+    private JPanel createCalendarPanel(List<String> tpNames) {
         JPanel main = new JPanel(new BorderLayout());
 
         // NORTH
         main.add(createNorthPanel(), BorderLayout.NORTH);
         // CENTER
-        main.add(createCenterPanel(), BorderLayout.CENTER);
+        main.add(createCenterPanel(tpNames), BorderLayout.CENTER);
         //add(createSidePanel(Color.GREEN, "WEST"), BorderLayout.WEST);
         //add(createSidePanel(Color.ORANGE, "EAST"), BorderLayout.EAST);
-        add(createSidePanel(Color.BLUE, "SOUTH"), BorderLayout.SOUTH);
+       // add(createSidePanel(Color.BLUE, "SOUTH"), BorderLayout.SOUTH);
 
         return main;
     }
@@ -144,15 +166,28 @@ public class Calendar extends JFrame {
      *
      * @return JScrollPane contenedor de la tabla
      */
-    private JScrollPane createCenterPanel() {
-        String[] columnNames = {"", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"};
-        String[] timeSlots = {
-                "08:30–09:25", "09:25–10:20", "10:15–10:40",  // DESCANSO
-                "10:40–11:35", "11:35–12:30", "12:25–12:40",  // DESCANSO
-                "12:40–13:35", "13:35–14:30", "14:30–15:25", "15:25–16:20"
-        };
+    private JScrollPane createCenterPanel(List<String> tpNames) {
+        String[] columnNames = {"", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes"};
+        String[] timeSlots = tpNames.toArray(new String[0]);
+
 
         Object[][] data = new Object[timeSlots.length][columnNames.length];
+        Schedule schedule = null;
+        if (typeEntity == "Profesor"){
+            schedule = presentationControler.getTeacherSchedule(idEntity, idSchedule);
+
+        }
+
+        if (typeEntity == "Clase"){
+            schedule = presentationControler.getClassroomSchedule(idEntity, idSchedule);
+        }
+
+        if (typeEntity == "Grupo de Alumnos"){
+            schedule = presentationControler.getStudentGroupSchedule(idEntity, idSchedule);
+        }
+
+
+
         for (int i = 0; i < timeSlots.length; i++) {
             data[i][0] = timeSlots[i];
             for (int j = 1; j < columnNames.length; j++) {
@@ -302,12 +337,6 @@ public class Calendar extends JFrame {
         return panel;
     }
 
-    /**
-     * Método main que inicia la aplicación
-     *
-     * @param args argumentos de línea de comandos (no se usan)
-     */
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new Calendar().setVisible(true));
-    }
+
+
 }

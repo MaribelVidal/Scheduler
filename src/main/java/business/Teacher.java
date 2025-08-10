@@ -51,6 +51,11 @@ public class Teacher extends Entity {
     private double percentageAchievedConditions; // Porcentaje de condiciones cumplidas
     private double percentageWeightedConditions; // Porcentaje de condiciones ponderadas cumplidas
 
+    private List<Schedule> schedules; // Lista de horarios asignados al profesor
+
+
+
+
     /**
      * Constructor principal de Teacher.
      * @param id Identificador único
@@ -77,6 +82,26 @@ public class Teacher extends Entity {
     }
 
     // Métodos getter y setter para los datos personales y preferencias
+
+    public List<Schedule> getSchedules() {
+        return schedules;
+    }
+
+    public void setSchedules(List<Schedule> schedules) {
+        this.schedules = schedules;
+    }
+
+    public void addSchedule(Schedule schedule) {
+        if (schedules == null) {
+            schedules = new ArrayList<>();
+        }
+        schedules.add(schedule);
+    }
+
+
+    public Schedule getScheduleById(int Id){
+        return schedules.get(Id);
+    }
 
     public String getEmail() {
         return email;

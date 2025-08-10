@@ -1,5 +1,6 @@
 package business;
 
+import java.util.ArrayList;
 import java.util.List;
 
 //le añadimos un atributo troncal y optativa para establecer los grupos ES4A, bilingüe...
@@ -11,10 +12,31 @@ public class StudentGroup extends Entity{
     private int weeklyGroupHours; // Número de horas asignadas a este grupo
     private int numberOfStudents;
     private List<Subject> requiredSubjects; // Unidades programadas para este grupo
+    private List<Schedule> schedules; // Horarios asignados a este grupo
 
     public StudentGroup(String id, String name, String abbreviation) {
         super(id, name, abbreviation);
         this.numberOfStudents = 25; // Inicializar a 0 por defecto
+    }
+
+
+    public List<Schedule> getSchedules() {
+        return schedules;
+    }
+
+    public void setSchedules(List<Schedule> schedules) {
+        this.schedules = schedules;
+    }
+
+    public void addSchedule(Schedule schedule) {
+        if (this.schedules == null) {
+            this.schedules = new ArrayList<>();
+        }
+        this.schedules.add(schedule);
+    }
+
+    public Schedule getScheduleById(int Id){
+        return schedules.get(Id);
     }
 
     public String getCourse() {

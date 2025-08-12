@@ -111,6 +111,26 @@ public class Schedule {
         System.out.println("Total Weighted Conditions: " + totalWeighted);
     }
 
+    public List<Lesson> getLessons() {
+        return lessons;
+    }
+
+
+    public Lesson getLessonAt(TimePeriod period, String columnName) {
+        for (Lesson lesson : lessons) {
+            if (lesson.getTimePeriod().equals(period)) {
+                // match column depending on type
+                if (lesson.getTeacher().getId().equals(columnName) ||
+                        lesson.getStudentGroup().getId().equals(columnName) ||
+                        lesson.getClassroom().getId().equals(columnName)) {
+                    return lesson;
+                }
+            }
+        }
+        return null;
+    }
+
+
 
 
 }

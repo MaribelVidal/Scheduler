@@ -23,6 +23,7 @@ public class BusinessController {
     private PersistenceController persistenceController;
 
     public BusinessController() throws Exception {
+        //this.persistenceController = new PersistenceController();
 
 /*
         this.persistenceController = new PersistenceController();
@@ -61,28 +62,56 @@ public class BusinessController {
 
     }
 
-    public Schedule getTeacherSchedule (String teacherId, int Id) {
-        Teacher teacher = teachers.stream()
-                .filter(t -> t.getId().equals(teacherId))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Teacher not found"));
-        return teacher.getScheduleById(Id);
+    public List<String> getSubjectsNames() {
+        return subjects.stream()
+                .map(Subject::getName)
+                .toList();
     }
 
-    public Schedule getStudentGroupSchedule (String studentGroupId, int Id) {
+    public List<Teacher> getTeachers() {
+        return teachers;
+    }
+
+    public List<Classroom> getClassrooms() {
+        return classrooms;
+    }
+
+    public List<StudentGroup> getStudentGroups() {
+        return studentGroups;
+    }
+
+    public Schedule getTeacherSchedule(String teacherId, int scheduleId) {
+        // key can be teacher ID, name, or abbreviation
+        Teacher teacher = teachers.stream()
+                .filter(t -> teacherId.equals(t.getId())
+                        || teacherId.equals(t.getName())
+                        || teacherId.equals(t.getAbbreviation()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Teacher not found: " + teacherId));
+
+        // return the schedule you want (this is just an example)
+        return teacher.getScheduleById(scheduleId);
+    }
+
+
+    public Schedule getStudentGroupSchedule (String studentGroupId, int scheduleId) {
         StudentGroup studentGroup = studentGroups.stream()
-                .filter(sg -> sg.getId().equals(studentGroupId))
+                .filter(sg -> studentGroupId.equals(sg.getId())
+                        || studentGroupId.equals(sg.getName())
+                        || studentGroupId.equals(sg.getAbbreviation()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Student group not found"));
-        return studentGroup.getScheduleById(Id);
+        return studentGroup.getScheduleById(scheduleId);
     }
 
-    public Schedule getClassroomSchedule (String classroomId, int Id) {
+    public Schedule getClassroomSchedule (String classroomId, int scheduleId) {
         Classroom classroom = classrooms.stream()
-                .filter(c -> c.getId().equals(classroomId))
+                .filter(c -> classroomId.equals(c.getId())
+                        || classroomId.equals(c.getName())
+                        || classroomId.equals(c.getAbbreviation()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Classroom not found"));
-        return classroom.getScheduleById(Id);
+        return classroom.getScheduleById(scheduleId);
     }
 
 
@@ -124,6 +153,92 @@ public class BusinessController {
 
 
 
+    }
+
+    public void addNewTeacher(Teacher teacher) {
+        if (teachers == null) {
+            teachers = new ArrayList<>();
+        }
+        teachers.add(teacher);
+        // Optionally, save to database
+        // persistenceController.add(teacher);
+    }
+
+    public void removeTeacher(String teacherId) {
+        if (teachers == null) {
+            return; // No teachers to remove
+        }
+        teachers.removeIf(teacher -> teacher.getId().equals(teacherId));
+        // Optionally, remove from database
+        // persistenceController.remove(Teacher.class, teacherId);
+    }
+
+    public void addNewClassroom(Classroom classroom) {
+        if (classrooms == null) {
+            classrooms = new ArrayList<>();
+        }
+        classrooms.add(classroom);
+        // Optionally, save to database
+        // persistenceController.add(classroom);
+    }
+    public void removeClassroom(String classroomId) {
+        if (classrooms == null) {
+            return; // No classrooms to remove
+        }
+        classrooms.removeIf(classroom -> classroom.getId().equals(classroomId));
+        // Optionally, remove from database
+        // persistenceController.remove(Classroom.class, classroomId);
+    }
+    public void addNewStudentGroup(StudentGroup studentGroup) {
+        if (studentGroups == null) {
+            studentGroups = new ArrayList<>();
+        }
+        studentGroups.add(studentGroup);
+        // Optionally, save to database
+        // persistenceController.add(studentGroup);
+    }
+    public void removeStudentGroup(String studentGroupId) {
+        if (studentGroups == null) {
+            return; // No student groups to remove
+        }
+        studentGroups.removeIf(studentGroup -> studentGroup.getId().equals(studentGroupId));
+        // Optionally, remove from database
+        // persistenceController.remove(StudentGroup.class, studentGroupId);
+    }
+
+    public void addNewTimePeriod(TimePeriod timePeriod) {
+        if (timePeriods == null) {
+            timePeriods = new ArrayList<>();
+        }
+        timePeriods.add(timePeriod);
+        // Optionally, save to database
+        // persistenceController.add(timePeriod);
+    }
+
+    public void removeTimePeriod(String timePeriodId) {
+        if (timePeriods == null) {
+            return; // No time periods to remove
+        }
+        timePeriods.removeIf(timePeriod -> timePeriod.getId().equals(timePeriodId));
+        // Optionally, remove from database
+        // persistenceController.remove(TimePeriod.class, timePeriodId);
+    }
+
+    public void addNewSubject(Subject subject) {
+        if (subjects == null) {
+            subjects = new ArrayList<>();
+        }
+        subjects.add(subject);
+        // Optionally, save to database
+        // persistenceController.add(subject);
+    }
+    public void removeSubject(String subjectId) {
+        if (subjects == null) {
+            return; // No subjects to remove
+        }
+        subjects.removeIf(subject -> subject.getId().equals(subjectId));
+        // Optionally, remove from database
+        // persistenceController.remove(Subject.class, subjectId);
     }
 
     public void solve (){
@@ -267,10 +382,10 @@ public class BusinessController {
         TimePeriod mon10 = new TimePeriod("mon10", "Lunes", LocalTime.of(10, 0), LocalTime.of(11, 0));
         TimePeriod tue9 = new TimePeriod("tue9", "Martes", LocalTime.of(9, 0), LocalTime.of(10, 0));
         TimePeriod tue10 = new TimePeriod("tue10", "Martes", LocalTime.of(10, 0), LocalTime.of(11, 0));
-        TimePeriod mon11 = new TimePeriod("mon11", "Lunes", LocalTime.of(9, 0), LocalTime.of(10, 0));
+        TimePeriod mon11 = new TimePeriod("mon11", "Lunes", LocalTime.of(11, 0), LocalTime.of(12, 0));
         //TimePeriod mon12= new TimePeriod("mon12", 1, LocalTime.of(10, 0), LocalTime.of(11, 0));
         TimePeriod tue11 = new TimePeriod("tue11", "Martes", LocalTime.of(11, 0), LocalTime.of(12, 0));
-        TimePeriod tue12 = new TimePeriod("tue12", "Martes", LocalTime.of(10, 0), LocalTime.of(11, 0));
+        TimePeriod tue12 = new TimePeriod("tue12", "Martes", LocalTime.of(12, 0), LocalTime.of(13, 0));
 
 
 

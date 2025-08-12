@@ -5,14 +5,14 @@ import java.util.List;
 
 public class TimePeriod {
 
-   private String id;
-   private String weekday;
-   private LocalTime initialHour;
-   private LocalTime finalHour;
-   private String idTeacher;
-   private String idSubject;
-   private String idStudentGroup;
-   private String idClassroom;
+    private String id;
+    private String weekday;
+    private LocalTime initialHour;
+    private LocalTime finalHour;
+    private String idTeacher;
+    private String idSubject;
+    private String idStudentGroup;
+    private String idClassroom;
 
     public TimePeriod(String id, String weekday, LocalTime initialHour, LocalTime finalHour) {
 
@@ -37,6 +37,10 @@ public class TimePeriod {
 
     public void setWeekday(String weekday) {
         this.weekday = weekday;
+    }
+
+    public String getName() {
+        return initialHour + "-" + finalHour;
     }
 
     public LocalTime getInitialHour() {

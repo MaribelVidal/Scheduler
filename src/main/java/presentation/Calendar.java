@@ -5,6 +5,7 @@
  */
 package presentation;
 
+import business.Lesson;
 import business.Schedule;
 
 import javax.swing.*;
@@ -19,90 +20,75 @@ import java.util.List;
 
 public class Calendar extends JFrame {
     private JComboBox<String> categoryCombo;
-    private JComboBox<String> nameCombo;
+    private JComboBox<ComboItem> nameCombo;
     private JLabel calendarTitle;
 
-    /**
-     * Índices de fila que corresponden a un descanso
-     */
+    /** Mantener referencia al scroll del calendario para refrescar la tabla */
+    private JScrollPane calendarScroll;
+
+    /** Última lista de tramos horarios para reconstrucción */
+    private List<String> lastTpNames;
+
+    /** Índices de fila que corresponden a un descanso */
     private final Set<Integer> breakRows = Set.of(2, 5);
 
-    /**
-     * Mapa de categorías → lista de nombres
-     */
+    /** Mapa de categorías → lista de nombres */
     private final Map<String, String[]> dataMap = new LinkedHashMap<>();
 
     /** Modelos de lista para gestión */
     private final DefaultListModel<String> profesoresModel = new DefaultListModel<>();
     private final DefaultListModel<String> clasesModel = new DefaultListModel<>();
     private final DefaultListModel<String> alumnosModel = new DefaultListModel<>();
+    private final DefaultListModel<String> asignaturasModel = new DefaultListModel<>();
+    private final DefaultListModel<String> periodosModel = new DefaultListModel<>();
 
-    private String typeEntity;
-    private String nameEntity;
-    private String idEntity;
-    private int idSchedule;
+    private String typeEntity;  // "Profesor" | "Clase" | "Grupo de Alumnos"
+    private String nameEntity;  // nombre seleccionado (para mostrar)
+    private String idEntity;    // id seleccionado (aquí usamos el mismo valor que nombre, ajusta si tienes un map nombre->id)
+    private int idSchedule = 0; // ajusta si necesitas otro id
 
-    //Todo: Hace falta poner el valor correcto de la entidad seleccionada
+    private boolean isRefreshing = false; // para evitar bucles infinitos al refrescar
 
+    private PresentationController presentationControler;
 
-    /**
-     * Constructor: inicializa la ventana y los componentes UI
-     */
-    public Calendar() {
+    public Calendar(PresentationController presentationController) {
         super("Calendario Semanal");
-        //initData(teachersNames, classroomsNames, studentsGroupsNames);
-        //initUI();
+        this.presentationControler = presentationController;
     }
 
-
-    public void init(List<String> teachersNames, List<String> classroomsNames, List<String> studentsGroupsNames, List<String> tpNames) {
-        // Inicializar el mapa de datos con los nombres de ejemplo
-        initData(teachersNames, classroomsNames, studentsGroupsNames);
-        // Configurar la interfaz gráfica
+    public void init(List<String> teachersNames, List<String> classroomsNames, List<String> studentsGroupsNames, List<String> tpNames, List<String> subjectsNames) {
+        this.lastTpNames = tpNames;
+        initData(teachersNames, classroomsNames, studentsGroupsNames, subjectsNames);
         initUI(tpNames);
+        setVisible(true);
     }
 
-
-    /**
-     * Rellena el map de datos con valores de ejemplo
-     */
-
-
-    private void initData(List<String> teachersNames, List<String> classroomsNames, List<String> studentsGroupsNames) {
+    /** Rellena el map de datos con valores */
+    private void initData(List<String> teachersNames, List<String> classroomsNames, List<String> studentsGroupsNames, List<String> subjectsNames) {
         dataMap.put("Profesores", teachersNames.toArray(new String[0]));
-        dataMap.put("Aulas",     classroomsNames.toArray(new String[0]));
-        dataMap.put("Grupos de Alumnos",    studentsGroupsNames.toArray(new String[0]));
+        dataMap.put("Aulas", classroomsNames.toArray(new String[0]));
+        dataMap.put("Grupos de Alumnos", studentsGroupsNames.toArray(new String[0]));
+        dataMap.put("Asignaturas", subjectsNames.toArray(new String[0]));
 
-        // Inicializar modelos de lista
+
         for (String p : dataMap.get("Profesores")) profesoresModel.addElement(p);
-        for (String c : dataMap.get("Aulas"))     clasesModel.addElement(c);
-        for (String a : dataMap.get("Grupos de Alumnos"))    alumnosModel.addElement(a);
+        for (String c : dataMap.get("Aulas")) clasesModel.addElement(c);
+        for (String a : dataMap.get("Grupos de Alumnos")) alumnosModel.addElement(a);
+        for (String s : dataMap.get("Asignaturas")) asignaturasModel.addElement(s);
     }
 
-    /**
-     * Configura la interfaz gráfica: paneles, tablas y listeners
-     */
+    /** Configura la interfaz gráfica: paneles, tablas y listeners */
     private void initUI(List<String> tpNames) {
-        /*
-        setLayout(new BorderLayout());
-
-        add(createNorthPanel(), BorderLayout.NORTH);
-        add(createCenterPanel(), BorderLayout.CENTER);
-        //add(createSidePanel(Color.GREEN, "WEST"), BorderLayout.WEST);
-        //add(createSidePanel(Color.ORANGE, "EAST"), BorderLayout.EAST);
-        add(createSidePanel(Color.BLUE, "SOUTH"), BorderLayout.SOUTH);
-
-        setSize(900, 600);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
-
-         */
+        dataMap.put("Periodos", tpNames.toArray(new String[0]));
+        for (String p : dataMap.get("Periodos")) periodosModel.addElement(p);
 
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("Horario", createCalendarPanel(tpNames));
-        tabs.addTab("Profesores", createManagementPanel("Profesor", profesoresModel));
-        tabs.addTab("Clases", createManagementPanel("Clase", clasesModel));
-        tabs.addTab("Alumnos", createManagementPanel("Alumno", alumnosModel));
+        tabs.addTab("Profesores", createManagementPanel("Profesores", profesoresModel));
+        tabs.addTab("Clases", createManagementPanel("Clases", clasesModel));
+        tabs.addTab("Grupos", createManagementPanel("Grupos", alumnosModel));
+        tabs.addTab("Asignaturas", createManagementPanel("Asignaturas", asignaturasModel));
+        tabs.addTab("Periodos", createManagementPanel("Periodos", periodosModel));
 
         add(tabs);
 
@@ -114,28 +100,19 @@ public class Calendar extends JFrame {
     /** Crea el panel del calendario con selector y tabla */
     private JPanel createCalendarPanel(List<String> tpNames) {
         JPanel main = new JPanel(new BorderLayout());
-
-        // NORTH
         main.add(createNorthPanel(), BorderLayout.NORTH);
-        // CENTER
-        main.add(createCenterPanel(tpNames), BorderLayout.CENTER);
-        //add(createSidePanel(Color.GREEN, "WEST"), BorderLayout.WEST);
-        //add(createSidePanel(Color.ORANGE, "EAST"), BorderLayout.EAST);
-       // add(createSidePanel(Color.BLUE, "SOUTH"), BorderLayout.SOUTH);
+
+        calendarScroll = createCenterPanel(tpNames);
+        main.add(calendarScroll, BorderLayout.CENTER);
 
         return main;
     }
 
-    /**
-     * Construye el panel superior con los JComboBox y el título dinámico
-     *
-     * @return JPanel configurado en BorderLayout
-     */
+    /** Panel superior con combos y título dinámico */
     private JPanel createNorthPanel() {
         JPanel north = new JPanel(new BorderLayout(0, 5));
         north.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Panel de selectores
         JPanel selectors = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
         selectors.add(new JLabel("Categoría:"));
         categoryCombo = new JComboBox<>(dataMap.keySet().toArray(new String[0]));
@@ -146,85 +123,236 @@ public class Calendar extends JFrame {
         selectors.add(nameCombo);
         north.add(selectors, BorderLayout.NORTH);
 
-        // Título dinámico
         calendarTitle = new JLabel("", SwingConstants.CENTER);
         calendarTitle.setFont(new Font("SansSerif", Font.BOLD, 16));
         north.add(calendarTitle, BorderLayout.SOUTH);
 
-        // Listeners
-        categoryCombo.addActionListener(e -> updateNames());
-        nameCombo.addActionListener(e ->
-                calendarTitle.setText("Horario de " + nameCombo.getSelectedItem())
-        );
-        updateNames();
+        // Listeners: cuando cambian, actualizamos type/id y refrescamos tabla
+        categoryCombo.addActionListener(e -> {
+            if(isRefreshing) return;
+            isRefreshing = true; // evita bucles infinitos
+            try {
+                updateNames(); // también fija title provisional
+                // Normaliza tipo (Profesores -> Profesor, Aulas -> Clase, Grupos de Alumnos -> Grupo de Alumnos)
+                typeEntity = normalizeType((String) categoryCombo.getSelectedItem());
+                // idEntity provisional al primer nombre si existe
+                ComboItem ci = (ComboItem) nameCombo.getSelectedItem();
+                if (ci != null) {
+                    idEntity = ci.id;
+                    nameEntity = ci.label;
+                } else {
+                    idEntity = null;
+                    nameEntity = null;
+                }
+                System.out.printf("Category change -> type=%s, id=%s, label=%s%n", typeEntity, idEntity, nameEntity);
+
+                refreshCalendarTable(lastTpNames);
+            }
+            finally {
+                isRefreshing = false; // permite futuros cambios
+            }
+        });
+
+        nameCombo.addActionListener(e -> {
+            if(isRefreshing) return;
+            isRefreshing = true; // evita bucles infinitos
+            try {
+                ComboItem ci = (ComboItem) nameCombo.getSelectedItem();
+                if (ci != null) {
+                    idEntity = ci.id;          // <-- pass this to BusinessController
+                    nameEntity = ci.label;
+                    calendarTitle.setText("Horario de " + nameEntity);
+                    refreshCalendarTable(lastTpNames);
+                }
+            }
+            finally {
+                isRefreshing = false; // permite futuros cambios
+            }
+        });
+
+        // Inicialización por defecto
+        // Selecciona la primera categoría y nombres
+        if (!dataMap.isEmpty()) {
+            categoryCombo.setSelectedIndex(0);
+            typeEntity = normalizeType((String) categoryCombo.getSelectedItem());
+            updateNames();
+            ComboItem first = (ComboItem) nameCombo.getSelectedItem();
+            if (first != null) {
+                idEntity = first.id;
+                nameEntity = first.label;
+            } else {
+                idEntity = null;
+                nameEntity = null;
+            }
+            calendarTitle.setText(nameEntity == null ? "Horario" : ("Horario de " + nameEntity));
+        }
 
         return north;
     }
 
-    /**
-     * Construye el panel central con la JTable del horario
-     *
-     * @return JScrollPane contenedor de la tabla
-     */
+    /** Construye el panel central con la JTable del horario */
     private JScrollPane createCenterPanel(List<String> tpNames) {
         String[] columnNames = {"", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes"};
-        String[] timeSlots = tpNames.toArray(new String[0]);
 
+        // If there’s no valid selection yet, show an empty table with whatever rows we got (maybe zero).
+        if (typeEntity == null || idEntity == null || idEntity.isEmpty()) {
+            String[] timeSlots = (tpNames == null) ? new String[0] : tpNames.toArray(new String[0]);
+            Object[][] data = new Object[timeSlots.length][columnNames.length];
+            for (int i = 0; i < timeSlots.length; i++) data[i][0] = timeSlots[i];
+            DefaultTableModel model = createTableModel(data, columnNames);
+            return new JScrollPane(createTable(model, columnNames.length));
+        }
 
-        Object[][] data = new Object[timeSlots.length][columnNames.length];
+        // Fetch schedule for the current selection
         Schedule schedule = null;
-        if (typeEntity == "Profesor"){
+        if ("Profesor".equals(typeEntity)) {
             schedule = presentationControler.getTeacherSchedule(idEntity, idSchedule);
-
-        }
-
-        if (typeEntity == "Clase"){
+        } else if ("Clase".equals(typeEntity)) {
             schedule = presentationControler.getClassroomSchedule(idEntity, idSchedule);
-        }
-
-        if (typeEntity == "Grupo de Alumnos"){
+        } else if ("Grupo de Alumnos".equals(typeEntity)) {
             schedule = presentationControler.getStudentGroupSchedule(idEntity, idSchedule);
         }
 
+        // --- SANITY CHECK ---
+        System.out.println("tpNames (incoming) = " + (tpNames == null ? "null" : tpNames));
+        System.out.printf("Selected type=%s, id=%s, label=%s%n", typeEntity, idEntity, nameEntity);
+        if (schedule == null) {
+            System.out.println("schedule = null");
+        } else if (schedule.getLessons() == null) {
+            System.out.println("schedule.getLessons() = null");
+        } else {
+            System.out.println("lessons.size = " + schedule.getLessons().size());
+            for (Lesson l : schedule.getLessons()) {
+                System.out.printf("  lesson: %s | day=%s | start=%s | end=%s | tpId=%s | teacher=%s | group=%s | room=%s%n",
+                        l.getSubject().getName(),
+                        l.getTimePeriod().getWeekday(),
+                        l.getTimePeriod().getInitialHour(),
+                        l.getTimePeriod().getFinalHour(),
+                        l.getTimePeriod().getId(),
+                        l.getTeacher().getId(),
+                        l.getStudentGroup().getId(),
+                        l.getClassroom().getId()
+                );
+            }
+        }
+        // --- END SANITY CHECK ---
 
+        // Decide final timeSlots: prefer provided tpNames; if empty, derive from schedule
+        java.util.List<String> slotList =
+                (tpNames != null && !tpNames.isEmpty())
+                        ? tpNames
+                        : deriveTimeSlotsFromSchedule(schedule);
 
+        String[] timeSlots = slotList.toArray(new String[0]);
+        Object[][] data = new Object[timeSlots.length][columnNames.length];
+
+        // Fill column 0 with labels
+        for (int i = 0; i < timeSlots.length; i++) data[i][0] = timeSlots[i];
+
+        // Nothing to match? return the header-only table
+        if (schedule == null || schedule.getLessons() == null) {
+            DefaultTableModel model = createTableModel(data, columnNames);
+            return new JScrollPane(createTable(model, columnNames.length));
+        }
+
+        // Populate cells by comparing weekday + start hour
         for (int i = 0; i < timeSlots.length; i++) {
-            data[i][0] = timeSlots[i];
+            int rowHour = parseRowStartHour(timeSlots[i]);   // 9, 10, 11, ...
             for (int j = 1; j < columnNames.length; j++) {
-                data[i][j] = "asd";
+                String day = columnNames[j];                 // "Lunes"... "Viernes"
+                Lesson found = null;
+                for (Lesson l : schedule.getLessons()) {
+                    boolean sameDay  = day.equalsIgnoreCase(lessonWeekday(l));
+                    boolean sameHour = rowHour == lessonStartHour(l);
+                    if (sameDay && sameHour) {
+                        // System.out.printf("MATCH: day=%s rowHour=%d -> %s%n", day, rowHour, l.getSubject().getName());
+                        found = l; break;
+                    }
+                }
+                data[i][j] = (found == null) ? "" : formatCell(found, typeEntity);
             }
         }
 
         DefaultTableModel model = createTableModel(data, columnNames);
-        JTable table = createTable(model, columnNames.length);
-
-        JScrollPane scroll = new JScrollPane(table);
-        return scroll;
+        return new JScrollPane(createTable(model, columnNames.length));
     }
 
-    /**
-     * Crea el modelo de la tabla bloqueando la edición donde corresponda
-     *
-     * @param data         datos de la tabla
-     * @param columnNames  nombres de columnas
-     * @return DefaultTableModel configurado
-     */
+
+
+    /** Reconstruye la tabla cuando cambian los combos */
+    private void refreshCalendarTable(List<String> tpNames) {
+        if (tpNames == null) return;
+
+        Container parent = (calendarScroll != null) ? calendarScroll.getParent() : null;
+
+        JScrollPane newScroll = createCenterPanel(tpNames);
+
+        if (parent != null && parent.getLayout() instanceof BorderLayout) {
+            parent.remove(calendarScroll);
+            calendarScroll = newScroll;
+            parent.add(calendarScroll, BorderLayout.CENTER);
+            parent.revalidate();
+            parent.repaint();
+        } else {
+            // Fallback
+            if (calendarScroll != null) {
+                Container oldParent = calendarScroll.getParent();
+                if (oldParent != null) oldParent.remove(calendarScroll);
+            }
+            calendarScroll = newScroll;
+            getContentPane().add(calendarScroll, BorderLayout.CENTER);
+            revalidate();
+            repaint();
+        }
+    }
+
+    /** Convierte etiqueta de pestaña en tipo usado por la lógica */
+    private String normalizeType(String categoryLabel) {
+        if ("Profesores".equals(categoryLabel)) return "Profesor";
+        if ("Aulas".equals(categoryLabel)) return "Clase";
+        if ("Grupos de Alumnos".equals(categoryLabel)) return "Grupo de Alumnos";
+        return categoryLabel;
+    }
+
+    /** Formatea el contenido de la celda dependiendo de la vista */
+    private String formatCell(Lesson lesson, String typeEntity) {
+        if ("Clase".equals(typeEntity)) {
+            return lesson.getSubject().getName() + " — " +
+                    lesson.getTeacher().getId() + " — " +
+                    lesson.getStudentGroup().getId();
+        } else if ("Profesor".equals(typeEntity)) {
+            return lesson.getSubject().getName() + " — " +
+                    lesson.getStudentGroup().getId() + " — " +
+                    lesson.getClassroom().getId();
+        } else { // Grupo de Alumnos
+            return lesson.getSubject().getName() + " — " +
+                    lesson.getTeacher().getId() + " — " +
+                    lesson.getClassroom().getId();
+        }
+    }
+
+    /** Extrae el día del Lesson (ajusta a tu API real) */
+    private String getLessonDay(Lesson l) {
+        // TODO: adapta a tu TimePeriod real, por ejemplo:
+        // return l.getTimePeriod().getDayName(); // "Lunes", ...
+        return l.getTimePeriod().getWeekday(); // si tu TimePeriod tiene getDay() devolviendo "Lunes"... "Viernes"
+    }
+
+    /** Extrae el slot/etiqueta de hora del Lesson (ajusta a tu API real) */
+    private String getLessonSlot(Lesson l) {
+        // TODO: adapta a tu TimePeriod real, por ejemplo:
+        // return l.getTimePeriod().getSlotLabel(); // "08:00–09:00"
+        return l.getTimePeriod().getName(); // si tu TimePeriod tiene getName() con "08:00–09:00"
+    }
+
+    /** Crea el modelo de la tabla bloqueando la edición */
     private DefaultTableModel createTableModel(Object[][] data, String[] columnNames) {
         return new DefaultTableModel(data, columnNames) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
+            @Override public boolean isCellEditable(int row, int column) { return false; }
         };
     }
 
-    /**
-     * Construye la JTable con renderizado de descansos fusionados y celdas centradas
-     *
-     * @param model         modelo de datos
-     * @param columnCount   número de columnas en la tabla
-     * @return JTable configurada
-     */
+    /** Construye la JTable con renderizado de descansos fusionados y celdas centradas */
     private JTable createTable(DefaultTableModel model, int columnCount) {
         JTable table = new JTable(model) {
             @Override
@@ -256,9 +384,8 @@ public class Calendar extends JFrame {
 
         table.setRowHeight(40);
         table.getTableHeader().setReorderingAllowed(false);
-        ((DefaultTableCellRenderer)
-                table.getTableHeader().getDefaultRenderer()
-        ).setHorizontalAlignment(SwingConstants.CENTER);
+        ((DefaultTableCellRenderer) table.getTableHeader().getDefaultRenderer())
+                .setHorizontalAlignment(SwingConstants.CENTER);
 
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
@@ -267,13 +394,7 @@ public class Calendar extends JFrame {
         return table;
     }
 
-    /**
-     * Construye un panel lateral de color y etiqueta centrada
-     *
-     * @param color   fondo del panel
-     * @param text    texto a mostrar
-     * @return JPanel configurado
-     */
+    /** Panel lateral de color y etiqueta centrada (no usado ahora) */
     private JPanel createSidePanel(Color color, String text) {
         JPanel panel = new JPanel();
         panel.setBackground(color);
@@ -281,32 +402,55 @@ public class Calendar extends JFrame {
         return panel;
     }
 
-    /**
-     * Actualiza el combo de nombres según la categoría seleccionada
-     * y establece el título correspondiente
-     */
+    private static final class ComboItem {
+        final String id;
+        final String label;
+        ComboItem(String id, String label) { this.id = id; this.label = label; }
+        @Override public String toString() { return label; } // shown in UI
+    }
+
+    /** Actualiza nombres según categoría y título */
     private void updateNames() {
         String cat = (String) categoryCombo.getSelectedItem();
-        String[] names = dataMap.getOrDefault(cat, new String[0]);
-        nameCombo.setModel(new DefaultComboBoxModel<>(names));
-        if (names.length > 0) {
-            calendarTitle.setText("Horario de " + names[0]);
+        DefaultComboBoxModel<ComboItem> model = new DefaultComboBoxModel<>();
+
+        if ("Profesores".equals(cat)) {
+            for (var t : presentationControler.getTeachers()) {
+                model.addElement(new ComboItem(t.getId(), t.getName())); // id + display name
+            }
+            typeEntity = "Profesor";
+        } else if ("Aulas".equals(cat)) {
+            for (var c : presentationControler.getClassrooms()) {
+                model.addElement(new ComboItem(c.getId(), c.getName()));
+            }
+            typeEntity = "Clase";
+        } else if ("Grupos de Alumnos".equals(cat)) {
+            for (var g : presentationControler.getStudentGroups()) {
+                model.addElement(new ComboItem(g.getId(), g.getName()));
+            }
+            typeEntity = "Grupo de Alumnos";
+        }
+
+        nameCombo.setModel(model);
+
+        ComboItem first = model.getSize() > 0 ? model.getElementAt(0) : null;
+        if (first != null) {
+            idEntity = first.id;
+            nameEntity = first.label;
+            calendarTitle.setText("Horario de " + nameEntity);
         } else {
+            idEntity = null;
+            nameEntity = null;
             calendarTitle.setText("Horario");
         }
     }
 
-    /**
-     * Crea un panel de gestión (alta/baja) con lista y botones
-     * @param title   Nombre de la entidad (Profesor, Clase, Alumno)
-     * @param model   Modelo de lista correspondiente
-     * @return JPanel con la UI de gestión
-     */
+    /** Crea panel de gestión (alta/baja) */
     private JPanel createManagementPanel(String title, DefaultListModel<String> model) {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        JLabel lbl = new JLabel(title + "s");
+        JLabel lbl = new JLabel(title );
         lbl.setFont(new Font("SansSerif", Font.BOLD, 14));
         panel.add(lbl, BorderLayout.NORTH);
 
@@ -322,7 +466,6 @@ public class Calendar extends JFrame {
         btns.add(remove);
         panel.add(btns, BorderLayout.SOUTH);
 
-        // Listeners de alta/baja
         add.addActionListener(e -> {
             String val = txt.getText().trim();
             if (!val.isEmpty() && !model.contains(val)) {
@@ -337,6 +480,50 @@ public class Calendar extends JFrame {
         return panel;
     }
 
+    // Parses the row label (e.g., "09:00-10:00", "09:00–10:00", "9-10", "mon9", "tue11") to the START hour.
+    private int parseRowStartHour(String label) {
+        if (label == null) return -1;
+        label = label.trim();
 
+        // Case 1: "HH:MM-..." or "H:MM–..."
+        try {
+            String first = label.split("[–-]")[0].trim(); // split on hyphen or en-dash
+            if (first.contains(":")) {
+                return java.time.LocalTime.parse(first).getHour();
+            }
+        } catch (Exception ignore) {}
+
+        // Case 2: trailing digits: "mon9", "tue11", "9"
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d{1,2})$").matcher(label);
+        if (m.find()) return Integer.parseInt(m.group(1));
+
+        return -1;
+    }
+
+    private String lessonWeekday(Lesson l) {
+        return l.getTimePeriod().getWeekday(); // "Lunes", "Martes", ...
+    }
+
+    private int lessonStartHour(Lesson l) {
+        return l.getTimePeriod().getInitialHour().getHour(); // 9, 10, 11, ...
+    }
+
+    private static String formatRange(java.time.LocalTime s, java.time.LocalTime e) {
+        return String.format("%02d:%02d-%02d:%02d", s.getHour(), s.getMinute(), e.getHour(), e.getMinute());
+    }
+
+    // Build unique, sorted row labels from a schedule’s lessons
+    private java.util.List<String> deriveTimeSlotsFromSchedule(Schedule schedule) {
+        if (schedule == null || schedule.getLessons() == null) return java.util.List.of();
+        java.util.TreeMap<java.time.LocalTime, java.time.LocalTime> ranges = new java.util.TreeMap<>();
+        for (Lesson l : schedule.getLessons()) {
+            var s = l.getTimePeriod().getInitialHour();
+            var e = l.getTimePeriod().getFinalHour();
+            ranges.merge(s, e, (oldE, newE) -> newE.isAfter(oldE) ? newE : oldE);
+        }
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (var en : ranges.entrySet()) out.add(formatRange(en.getKey(), en.getValue()));
+        return out;
+    }
 
 }

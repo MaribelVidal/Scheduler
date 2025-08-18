@@ -1,20 +1,27 @@
 package persistence.DAO;
 
 import business.Classroom;
+import business.Schedule;
 import business.Subject;
-import business.Teacher;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ClassroomDAO implements DAO<Classroom>{
+   private final ClassroomAssignedSubjectsDAO classroomAssignedSubjectsDAO;
+   private final ClassroomAssignedSchedulesDAO classroomAssignedSchedulesDAO;
+
+
 
     private Connection connection;
 
 
     public ClassroomDAO(Connection connection) {
+
         this.connection = connection;
+        this.classroomAssignedSubjectsDAO = new ClassroomAssignedSubjectsDAO(connection, new SubjectDAO(connection));
+        this.classroomAssignedSchedulesDAO = new ClassroomAssignedSchedulesDAO(connection, new ScheduleDAO(connection));
     }
 
     @Override
@@ -26,6 +33,17 @@ public class ClassroomDAO implements DAO<Classroom>{
             preparedStatement.setString(3,classroom.getAbbreviation());
             preparedStatement.setString(4,classroom.getClassroomType());
             preparedStatement.setInt(5,classroom.getCapacity());
+
+            for(Subject subject :classroom.getAssignedSubjects()){
+                classroomAssignedSubjectsDAO.classroomAssignedSubjects(classroom.getId(), subject.getId());
+
+            }
+
+            for(Schedule schedule :classroom.getSchedules()){
+                classroomAssignedSchedulesDAO.classroomAssignedSchedules(classroom.getId(), schedule.getId());
+
+
+            }
 
 
             preparedStatement.executeUpdate();

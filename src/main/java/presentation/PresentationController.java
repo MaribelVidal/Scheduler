@@ -83,7 +83,19 @@ public class PresentationController {
         businessController.removeSubject(subjectId);
     }
 
+    public void refreshTeachersUI() {
+        if (calendar != null) {
+            calendar.refreshEntities();
+        }
+    }
 
 
+    public void updateTeacher(Teacher teacher) {
+        businessController.updateTeacher(teacher);
+        // If calendar open, refresh entities (e.g., name changed)
+        if (calendar != null) {
+            calendar.refreshEntities();
+        }
+    }
 
 }

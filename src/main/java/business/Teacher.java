@@ -12,7 +12,7 @@ public class Teacher extends Entity {
     private String phone; // Teléfono de contacto
     private String department; // Departamento al que pertenece el profesor
     //private boolean tutorial;
-    private List<String> role; // Roles del profesor (tutor, jefe de estudios, etc.)
+    //private List<String> role; // Roles del profesor (tutor, jefe de estudios, etc.)
     private List<Subject> possibleSubjects; // Asignaturas que puede impartir según sus habilitaciones
     //private TimePeriod timePeriod;
     private int hoursWork; // Máximo número de horas de trabajo semanales
@@ -31,20 +31,20 @@ public class Teacher extends Entity {
     private List<TimePeriod> unavailableTimePeriods; // Horarios no disponibles
 
     // Horario: Lista de periodos de tiempo preferidos por el profesor
-    private List<TimePeriod> preferredTimePeriods; // Horarios preferidos
+    //private List<TimePeriod> preferredTimePeriods; // Horarios preferidos
 
     // Horario: Lista de periodos de tiempo NO deseables por el profesor
-    private List<TimePeriod> unPreferredTimePeriods; // Horarios no deseados
+    //private List<TimePeriod> unPreferredTimePeriods; // Horarios no deseados
 
     // Asignaturas: Lista de asignaturas preferidas por el profesor
-    private List<Subject> preferredSubjects; // Asignaturas preferidas
+    //private List<Subject> preferredSubjects; // Asignaturas preferidas
     //Todo Controlar ls asignaturas preferidas estén incluidas en la lista de asignaturas posibles
 
     // Grupos de alumnos: Lista de grupos de grupos de alumnos preferidos por el profesor
-    private List<StudentGroup> preferredStudentGroups; // Grupos de alumnos preferidos
+    //private List<StudentGroup> preferredStudentGroups; // Grupos de alumnos preferidos
 
     // Grupos de alumnos: Lista de grupos de grupos de alumnos No deseables por el profesor
-    private List<StudentGroup> unPreferredStudentGroups; // Grupos de alumnos no deseado
+    //private List<StudentGroup> unPreferredStudentGroups; // Grupos de alumnos no deseado
     //Todo soft Constraint asociada a los grupos de estudiantes no deseados.
     //Todo Controlar las Soft y Hard Constraints asociadas a horas de docencia asignadas, no a las horas máximas
 
@@ -70,11 +70,11 @@ public class Teacher extends Entity {
         //Todo: Inicializar horas de trabajo máximas por cada profesor
         //Todo: Inicializar las horas de docencia asignadas a cada profesor.
         this.unavailableTimePeriods= new ArrayList<>();
-        this.preferredTimePeriods= new ArrayList<>();
-        this.unPreferredTimePeriods= new ArrayList<>();
-        this.preferredSubjects = new ArrayList<>();
-        this.preferredStudentGroups = new ArrayList<>();
-        this.unPreferredStudentGroups = new ArrayList<>();
+        //this.preferredTimePeriods= new ArrayList<>();
+        //this.unPreferredTimePeriods= new ArrayList<>();
+        //this.preferredSubjects = new ArrayList<>();
+        //this.preferredStudentGroups = new ArrayList<>();
+        //this.unPreferredStudentGroups = new ArrayList<>();
         this.preferredConditions = new ArrayList<>();
         this.unPreferredConditions = new ArrayList<>();
         this.percentageAchievedConditions = 0.0;
@@ -124,12 +124,7 @@ public class Teacher extends Entity {
         this.department = department;
     }
 
-    public List<String> getRole() {
-        return role;
-    }
-    public void setRole(List<String> role) {
-        this.role = role;
-    }
+
 
     public List<Subject> getPossibleSubjects() {
         return possibleSubjects;
@@ -182,7 +177,7 @@ public class Teacher extends Entity {
      */
     public boolean canTeach(Subject subject) {    return possibleSubjects.contains(subject);}
 
-
+/*
     public List<TimePeriod> getPreferredTimePeriods() {
         return preferredTimePeriods;
     }
@@ -203,23 +198,23 @@ public class Teacher extends Entity {
      */
     public void addPreferredTimePeriod(TimePeriod timePeriod, int weight) {
 
-        preferredTimePeriods.add(timePeriod);
+        //preferredTimePeriods.add(timePeriod);
         preferredConditions.add (new Condition(this, weight, timePeriod));
     }
 
     /**
      * Indica si el profesor prefiere un periodo dado.
      */
-    public boolean prefersTimePeriod(TimePeriod timePeriod) {
+    /*public boolean prefersTimePeriod(TimePeriod timePeriod) {
         return preferredTimePeriods.contains(timePeriod);
     }
 
     public List<TimePeriod> getUnPreferredTimePeriods() {
         return unPreferredTimePeriods;
     }
-
+*/
     public void setUnPreferredTimePeriods(List<TimePeriod> unPreferredTimePeriods, int weight) {
-        this.unPreferredTimePeriods = unPreferredTimePeriods;
+        //this.unPreferredTimePeriods = unPreferredTimePeriods;
 
         for (TimePeriod timePeriod : unPreferredTimePeriods) {
 
@@ -230,7 +225,7 @@ public class Teacher extends Entity {
 
 
     public void addUnPreferredTimePeriod(TimePeriod timePeriod, int weight) {
-        unPreferredTimePeriods.add(timePeriod);
+        //unPreferredTimePeriods.add(timePeriod);
 
         unPreferredConditions.add (new Condition(this, weight, timePeriod));
 
@@ -240,16 +235,19 @@ public class Teacher extends Entity {
      */
 
 
-
+/*
     public boolean dislikesTimePeriod(TimePeriod timePeriod) {
         return unPreferredTimePeriods.contains(timePeriod);
     }
 
+
     public List<Subject> getPreferredSubjects() {
         return preferredSubjects;
     }
+    */
+
     public void setPreferredSubjects(List<Subject> preferredSubjects, int weight) {
-        this.preferredSubjects = preferredSubjects;
+        //this.preferredSubjects = preferredSubjects;
 
         for (Subject subject : preferredSubjects) {
 
@@ -261,17 +259,20 @@ public class Teacher extends Entity {
 
 
     public void addPreferredSubject(Subject subject, int weight) {
-        preferredSubjects.add(subject);
+        //preferredSubjects.add(subject);
         preferredConditions.add (new Condition(this, weight, subject));
     }
 
+    /*
     public List<StudentGroup> getPreferredStudentGroups() {
         return preferredStudentGroups;
     }
 
+*/
+
 
     public void setPreferredStudentGroups(List<StudentGroup> preferredStudentGroups, int weight) {
-        this.preferredStudentGroups = preferredStudentGroups;
+        //this.preferredStudentGroups = preferredStudentGroups;
         for (StudentGroup studentGroup : preferredStudentGroups) {
 
             preferredConditions.add (new Condition(this, weight, studentGroup))  ;
@@ -280,19 +281,19 @@ public class Teacher extends Entity {
     }
 
     public void addPreferredStudentGroup(StudentGroup studentGroup, int weight) {
-        preferredStudentGroups.add(studentGroup);
+        //preferredStudentGroups.add(studentGroup);
         preferredConditions.add (new Condition(this, weight, studentGroup));
     }
 
 
 
-
+/*
     public List<StudentGroup> getUnPreferredStudentGroups() {
         return unPreferredStudentGroups;
     }
-
+*/
     public void setUnPreferredStudentGroups(List<StudentGroup> unPreferredStudentGroups, int weight) {
-        this.unPreferredStudentGroups = unPreferredStudentGroups;
+        //this.unPreferredStudentGroups = unPreferredStudentGroups;
         for (StudentGroup studentGroup : unPreferredStudentGroups) {
 
             unPreferredConditions.add (new Condition(this, weight, studentGroup))  ;
@@ -301,7 +302,7 @@ public class Teacher extends Entity {
     }
 
     public void addUnPreferredStudentGroup(StudentGroup studentGroup, int weight) {
-        unPreferredStudentGroups.add(studentGroup);
+        //unPreferredStudentGroups.add(studentGroup);
         unPreferredConditions.add (new Condition(this, weight, studentGroup));
     }
 

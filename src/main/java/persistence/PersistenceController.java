@@ -14,8 +14,8 @@ public class PersistenceController {
     private ClassroomDAO classroomDAO;
     private TimePeriodDAO timePeriodDAO;
     private PossibleTeacherSubjectsDAO possibleTeacherSubjectsDAO;
-    private ActivityDAO activityDAO;
-    private TeachersInActivityDAO teeachersInActivityDAO;
+
+
 
 
     public PersistenceController () throws SQLException {
@@ -27,8 +27,8 @@ public class PersistenceController {
         this.subjectDAO = new SubjectDAO(connection);
         this.classroomDAO = new ClassroomDAO(connection);
         this.timePeriodDAO = new TimePeriodDAO(connection);
-        this.activityDAO = new ActivityDAO(connection);
-        this.teeachersInActivityDAO = new TeachersInActivityDAO(connection, teacherDAO);
+
+
         this.possibleTeacherSubjectsDAO = new PossibleTeacherSubjectsDAO(connection, subjectDAO);
     }
 

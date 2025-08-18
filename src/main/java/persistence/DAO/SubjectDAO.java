@@ -12,6 +12,7 @@ public class SubjectDAO implements DAO<Subject> {
     private Connection connection;
     private ClassroomDAO classroomDAO;
 
+
     public SubjectDAO(Connection connection) {
         this.connection = connection;
         this.classroomDAO = new ClassroomDAO(connection);
@@ -20,7 +21,7 @@ public class SubjectDAO implements DAO<Subject> {
     @Override
     public void add(Subject subject) throws SQLException {
         //String query = "INSERT INTO subjects (id, name, abbreviation, department, course, weeklyAssignedHours, assignedClassroom) VALUES (?, ?, ?, ?, ?, ?, ?)";
-        String query = "INSERT INTO subjects (id, name, abbreviation, department, course, weeklyAssignedHours, assignedClassroom) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String query = "INSERT INTO subjects (id, name, abbreviation, department, course, weeklyAssignedHours, duration, maxDailyHours, assignedClassroom) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1,subject.getId());
             preparedStatement.setString(2,subject.getName());
@@ -28,11 +29,14 @@ public class SubjectDAO implements DAO<Subject> {
             preparedStatement.setString(4,subject.getDepartment());
             preparedStatement.setString(5, subject.getCourse());
             preparedStatement.setInt(6,subject.getWeeklyAssignedHours());
+            preparedStatement.setInt(7,subject.getDuration());
+            preparedStatement.setInt(8,subject.getMaxDailyHours());
+
 
             if(subject.getAssignedClassroom() != null) {
-                preparedStatement.setString(7, subject.getAssignedClassroom().getId());
+                preparedStatement.setString(9, subject.getAssignedClassroom().getId());
             } else {
-                preparedStatement.setNull(7, Types.VARCHAR);
+                preparedStatement.setNull(9, Types.VARCHAR);
             }
 
             preparedStatement.executeUpdate();
@@ -42,19 +46,22 @@ public class SubjectDAO implements DAO<Subject> {
 
     @Override
     public void update(Subject subject) throws SQLException {
-        String query = "UPDATE subjects SET name = ?, abbreviation = ?, department = ?, course = ?, weeklyAssignedHours = ?, assignedClassroom = ? WHERE id = ?";
+        String query = "UPDATE subjects SET name = ?, abbreviation = ?, department = ?, course = ?, weeklyAssignedHours = ?, duration = ?, maxDailyHours = ?, assignedClassroom = ? WHERE id = ?";
         try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1, subject.getName());
             preparedStatement.setString(2, subject.getAbbreviation());
             preparedStatement.setString(3,subject.getDepartment());
             preparedStatement.setString(4, subject.getCourse());
             preparedStatement.setInt(5, subject.getWeeklyAssignedHours());
+            preparedStatement.setInt(6, subject.getDuration());
+            preparedStatement.setInt(7, subject.getMaxDailyHours());
+
             if(subject.getAssignedClassroom() != null) {
-                preparedStatement.setString(6, subject.getAssignedClassroom().getId());
+                preparedStatement.setString(8, subject.getAssignedClassroom().getId());
             } else {
-                preparedStatement.setNull(6, Types.VARCHAR);
+                preparedStatement.setNull(8, Types.VARCHAR);
             }
-            preparedStatement.setString(7, subject.getId());
+            preparedStatement.setString(9, subject.getId());
             preparedStatement.executeUpdate();
         }
     }
@@ -73,6 +80,8 @@ public class SubjectDAO implements DAO<Subject> {
                 String department = resultset.getString("department");
                 String course = resultset.getString("course");
                 int weeklyAssignedHours = resultset.getInt("weeklyAssignedHours");
+                int duration = resultset.getInt("duration");
+                int maxDailyHours = resultset.getInt("maxDailyHours");
                 String classroomId = resultset.getString("assignedClassroom");
                 Classroom assignedClassroom = classroomDAO.getOne(classroomId);
 
@@ -81,6 +90,8 @@ public class SubjectDAO implements DAO<Subject> {
                 subject.setDepartment(department);
                 subject.setCourse(course);
                 subject.setWeeklyAssignedHours(weeklyAssignedHours);
+                subject.setDuration(duration);
+                subject.setMaxDailyHours(maxDailyHours);
                 subject.setAssignedClassroom(assignedClassroom);
 
                 subjects.add(subject);
@@ -110,6 +121,8 @@ public class SubjectDAO implements DAO<Subject> {
                 String department = resultset.getString("department");
                 String course = resultset.getString("course");
                 int weeklyAssignedHours = resultset.getInt("weeklyAssignedHours");
+                int duration = resultset.getInt("duration");
+                int maxDailyHours = resultset.getInt("maxDailyHours");
                 String classroomId = resultset.getString("assignedClassroom");
                 Classroom assignedClassroom = classroomDAO.getOne(classroomId);
                 //TOdo acabar de arreglar departamento
@@ -118,6 +131,8 @@ public class SubjectDAO implements DAO<Subject> {
                 subject.setDepartment(department);
                 subject.setCourse(course);
                 subject.setWeeklyAssignedHours(weeklyAssignedHours);
+                subject.setDuration(duration);
+                subject.setMaxDailyHours(maxDailyHours);
                 subject.setAssignedClassroom(assignedClassroom);
 
                 return subject;

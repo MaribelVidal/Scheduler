@@ -84,7 +84,7 @@ public class Calendar extends JFrame {
 
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("Horario", createCalendarPanel(tpNames));
-        tabs.addTab("Profesores", createManagementPanel("Profesores", profesoresModel));
+        tabs.addTab("Profesores", new ProfesoresPanel(presentationControler));
         tabs.addTab("Clases", createManagementPanel("Clases", clasesModel));
         tabs.addTab("Grupos", createManagementPanel("Grupos", alumnosModel));
         tabs.addTab("Asignaturas", createManagementPanel("Asignaturas", asignaturasModel));
@@ -526,4 +526,37 @@ public class Calendar extends JFrame {
         return out;
     }
 
+
+    /**
+     * Reconstruye la lista de entidades (según la categoría seleccionada)
+     * e intenta mantener la selección previa si sigue existiendo.
+     * También refresca la tabla del calendario.
+     */
+    public void refreshEntities() {
+        // Guardar selección actual por id
+        ComboItem selected = (ComboItem) nameCombo.getSelectedItem();
+        String prevId = (selected != null) ? selected.id : null;
+
+        // Reconstruir el combo de entidades según la categoría
+        updateNames();
+
+        // Intentar restaurar la selección anterior (si el id sigue en la lista)
+        if (prevId != null) {
+            ComboBoxModel<ComboItem> model = nameCombo.getModel();
+            for (int i = 0; i < model.getSize(); i++) {
+                ComboItem it = model.getElementAt(i);
+                if (prevId.equals(it.id)) {
+                    nameCombo.setSelectedIndex(i);
+                    // Alinear estado interno y título
+                    idEntity = it.id;
+                    nameEntity = it.label;
+                    calendarTitle.setText("Horario de " + nameEntity);
+                    break;
+                }
+            }
+        }
+
+        // Volver a crear la tabla con los mismos tramos horarios (si aplica)
+        refreshCalendarTable(lastTpNames);
+    }
 }

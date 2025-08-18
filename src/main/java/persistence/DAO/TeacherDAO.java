@@ -10,12 +10,20 @@ import java.util.List;
 public class TeacherDAO implements DAO<Teacher>{
     private Connection connection;
     private final PossibleTeacherSubjectsDAO possibleTeacherSubjectsDAO;
-
+    private final TeacherPreferredConditionsDAO teacherPreferredConditionsDAO;
+    private final TeacherUnpreferredConditionsDAO teacherUnpreferredConditionsDAO;
+    private final TeacherAssignedSchedulesDAO teacherAssignedSchedulesDAO;
+    private final TeacherUnavailableTimePeriodsDAO teacherUnavailableTimePeriodsDAO;
 
 
     public TeacherDAO(Connection connection) {
         this.connection = connection;
         this.possibleTeacherSubjectsDAO = new PossibleTeacherSubjectsDAO(connection, new SubjectDAO(connection));
+        this.teacherPreferredConditionsDAO = new TeacherPreferredConditionsDAO(connection, new ConditionDAO(connection));
+        this.teacherUnpreferredConditionsDAO = new TeacherUnpreferredConditionsDAO(connection, new ConditionDAO(connection));
+        this.teacherAssignedSchedulesDAO = new TeacherAssignedSchedulesDAO(connection, new ScheduleDAO(connection));
+        this.teacherUnavailableTimePeriodsDAO = new TeacherUnavailableTimePeriodsDAO(connection, new TimePeriodDAO(connection));
+
     }
 
     @Override
@@ -54,6 +62,19 @@ public class TeacherDAO implements DAO<Teacher>{
 
             }
 
+            for (String conditionId : teacher.getPreferredConditions()) {
+                teacherPreferredConditionsDAO.assignTeacherCondition(teacher.getId(), conditionId);
+            }
+            for (String conditionId : teacher.getUnpreferredConditions()) {
+                teacherUnpreferredConditionsDAO.assignTeacherCondition(teacher.getId(), conditionId);
+            }
+
+
+
+            for (String scheduleId : teacher.getAssignedSchedules()) {
+                teacherAssignedSchedulesDAO.assignTeacherSchedule(teacher.getId(), scheduleId);
+            }
+
 
         }
 
@@ -88,6 +109,11 @@ public class TeacherDAO implements DAO<Teacher>{
 
             preparedStatement.executeUpdate();
         }
+    }
+
+    @Override
+    public Teacher getOne(String id, String id2, String type) throws Exception {
+        return null;
     }
 
     @Override

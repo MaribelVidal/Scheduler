@@ -40,11 +40,7 @@ public class DAOFactory {
 
                 daoInstances.put(clazz, new StudentGroupDAO(conn));
 
-            } else if (clazz == Activity.class) {
-
-                daoInstances.put(clazz, new ActivityDAO(conn));
-
-            } else {
+            }  else {
 
                 throw new Exception("DAO not found for class: " + clazz.getSimpleName());
 

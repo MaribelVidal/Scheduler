@@ -20,7 +20,7 @@ public class BusinessController {
 
 
 
-    private PersistenceController persistenceController;
+    //private PersistenceController persistenceController;
 
     public BusinessController() throws Exception {
         //this.persistenceController = new PersistenceController();
@@ -240,6 +240,31 @@ public class BusinessController {
         // Optionally, remove from database
         // persistenceController.remove(Subject.class, subjectId);
     }
+
+    /**
+     * Updates an existing teacher by ID. Only basic fields are updated here.
+     * If the teacher is not found, nothing happens.
+     */
+    public void updateTeacher(Teacher updated) {
+        if (updated == null || updated.getId() == null) return;
+        if (teachers == null) return;
+
+        for (int i = 0; i < teachers.size(); i++) {
+            Teacher curr = teachers.get(i);
+            if (updated.getId().equals(curr.getId())) {
+                // Update in place to preserve object references elsewhere
+                curr.setName(updated.getName());
+                curr.setEmail(updated.getEmail());
+                curr.setPhone(updated.getPhone());
+                curr.setDepartment(updated.getDepartment());
+                curr.setHoursWork(updated.getHoursWork());
+                // Extend here if you want to sync other fields/lists (roles, subjects, etc.)
+                // Optionally persist using your persistence layer here.
+                return;
+            }
+        }
+    }
+
 
     public void solve (){
         //this.solver = new ScheduleSolver(teachers, studentGroups, subjects, classrooms, timePeriods);

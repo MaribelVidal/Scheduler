@@ -1,6 +1,8 @@
 package persistence.DAO;
 
+import business.Schedule;
 import business.StudentGroup;
+import business.Subject;
 import business.Teacher;
 
 import java.sql.*;
@@ -11,11 +13,15 @@ public class StudentGroupDAO implements DAO<StudentGroup>{
 
     private Connection connection;
     private TeacherDAO teacherDAO;
+    private StudentGroupRequiredSubjectsDAO studentGroupRequiredSubjectsDAO;
+    private StudentGroupAssignedSchedulesDAO studentGroupAssignedSchedulesDAO;
 
     public StudentGroupDAO(Connection connection) {
 
         this.connection = connection;
         this.teacherDAO = new TeacherDAO(connection);
+        this.studentGroupRequiredSubjectsDAO = new StudentGroupRequiredSubjectsDAO(connection, new SubjectDAO(connection));
+        this.studentGroupAssignedSchedulesDAO = new StudentGroupAssignedSchedulesDAO(connection, new ScheduleDAO(connection));
     }
 
     @Override
@@ -29,6 +35,17 @@ public class StudentGroupDAO implements DAO<StudentGroup>{
             preparedStatement.setString(5,studentGroup.getAssignedTutor().getId());
             preparedStatement.setInt(6,studentGroup.getWeeklyGroupHours());
             preparedStatement.setInt(7,studentGroup.getNumberOfStudents());
+
+            for(Subject subject :studentGroup.getRequiredSubjects()){
+                studentGroupRequiredSubjectsDAO.studentGroupRequiredSubjects(studentGroup.getId(), subject.getId());
+
+            }
+
+            for(Schedule schedule :studentGroup.getSchedules()){
+                studentGroupAssignedSchedulesDAO.studentGroupAssignedSchedules(studentGroup.getId(), schedule.getId());
+
+
+            }
 
             preparedStatement.executeUpdate();
         }
@@ -45,6 +62,7 @@ public class StudentGroupDAO implements DAO<StudentGroup>{
             preparedStatement.setString(4, studentGroup.getAssignedTutor().getId());
             preparedStatement.setInt(5, studentGroup.getWeeklyGroupHours());
             preparedStatement.setInt(6, studentGroup.getNumberOfStudents());
+
             preparedStatement.setString(7, studentGroup.getId());
 
             preparedStatement.executeUpdate();

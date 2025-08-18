@@ -1,7 +1,11 @@
 package business;
 
+import java.util.UUID;
+
 public class Condition {
-    public  String ConditionType;
+
+    private String id;
+    private  String ConditionType;
     private Teacher teacher;
     private int weight;
 
@@ -14,6 +18,7 @@ public class Condition {
     private StudentGroup dummyStudentGroup = new StudentGroup("dummy", "Dummy Group", "dummy");
 
     public Condition(Teacher teacher, int weight) {
+        this.id = UUID.randomUUID().toString();
         this.teacher = teacher;
         this.weight = weight;
         this.subject = dummySubject;
@@ -23,6 +28,7 @@ public class Condition {
     }
 
     public Condition (Teacher teacher, int weight, Subject subject) {
+        this.id = UUID.randomUUID().toString();
         this.teacher = teacher;
         this.weight = weight;
         this.subject = subject;
@@ -32,6 +38,7 @@ public class Condition {
     }
 
     public Condition (Teacher teacher, int weight, TimePeriod timePeriod) {
+        this.id = UUID.randomUUID().toString();
         this.teacher = teacher;
         this.weight = weight;
         this.subject = dummySubject;
@@ -42,6 +49,7 @@ public class Condition {
     }
 
     public Condition (Teacher teacher, int weight, StudentGroup studentGroup) {
+        this.id = UUID.randomUUID().toString();
         this.teacher = teacher;
         this.weight = weight;
         this.subject = dummySubject;
@@ -50,7 +58,12 @@ public class Condition {
         this.ConditionType = "StudentGroup";
     }
 
-
+    public String getId() {
+        return id;
+    }
+    public void setId(String id) {
+        this.id = id;
+    }
 
     public Teacher getTeacher() {
         return teacher;
@@ -92,7 +105,7 @@ public class Condition {
         this.studentGroup = studentGroup;
     }
 
-    public String getType() {
+    public String getConditionType() {
         return ConditionType;
     }
 }

@@ -32,8 +32,13 @@ public class Classroom extends Entity{
         this.schedules.add(schedule);
     }
 
-    public Schedule getScheduleById(int Id){
-        return schedules.get(Id);
+    public Schedule getScheduleById(String Id){
+        for (Schedule schedule : schedules) {
+            if (schedule.getId().equals(Id)) {
+                return schedule;
+            }
+        }
+        return null; // or throw an exception if not found
     }
 
     public String getClassroomType() {

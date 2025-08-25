@@ -2,8 +2,11 @@ package business;
 
 import org.chocosolver.solver.variables.IntVar;
 
+import java.util.UUID;
+
 public class Lesson {
 
+    private String id;
     private Teacher teacher;
     private StudentGroup studentGroup;
     private Subject subject;
@@ -11,7 +14,16 @@ public class Lesson {
     private TimePeriod timePeriod;
 
 
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
     public Lesson(Teacher teacher, StudentGroup studentGroup, Classroom classroom, TimePeriod timePeriod, Subject subject) {
+        this.id = UUID.randomUUID().toString();
         this.teacher = teacher;
         this.studentGroup = studentGroup;
         this.classroom = classroom;

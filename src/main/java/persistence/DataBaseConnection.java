@@ -65,11 +65,8 @@ public class DataBaseConnection {
                 + "	email varchar(255), \n"
                 + "	phone varchar(255), \n"
                 + "	department varchar(50) ,\n"
-               //+ " FOREIGN KEY (possibleSubjects) REFERENCES possibleSubjects(subjectId),\n"
-                + "	role varchar(255), \n"
                 + "	hoursWork int NOT NULL\n"
-               // " FOREIGN KEY (subjectId) REFERENCES preferencedSubjects(id),\n"
-               // " FOREIGN KEY (timePeriodId) REFERENCES preferencedTimePeriods(id),\n"
+
                 + ");";
 
         try(
@@ -84,7 +81,7 @@ public class DataBaseConnection {
         }
 }
         public void createTeacherPossibleSubjectTable(){
-            String createTableSQL = "CREATE TABLE IF NOT EXISTS possibleSubjects (\n"
+            String createTableSQL = "CREATE TABLE IF NOT EXISTS teacherPossibleSubjects (\n"
                     + "    teacherId varchar(50) NOT NULL,\n"
                     + "    subjectId varchar(50) NOT NULL,\n"
                     + "    PRIMARY KEY (teacherId, subjectId),\n"
@@ -94,12 +91,12 @@ public class DataBaseConnection {
 
             try (Statement stmt = connection.createStatement()) {
                 stmt.executeUpdate(createTableSQL);
-                System.out.println("Tabla teacher_possibleSubject creada correctamente");
+                System.out.println("Tabla TeacherPossibleSubjects creada correctamente");
             } catch(SQLException e) {
                 e.printStackTrace();
             }
         }
-
+/*
     public void createActivityTable () {
 
         String createTableSQL = "CREATE TABLE IF NOT EXISTS activities (\n"
@@ -137,44 +134,77 @@ public class DataBaseConnection {
             e.printStackTrace();
         }
     }
+*/
+    public void createTeacherAssignedSchedulesTable() {
+    String createTableSQL = "CREATE TABLE IF NOT EXISTS teacherAssignedSchedules (\n"
+            + "    teacherId varchar(50) NOT NULL,\n"
+            + "    scheduleId varchar(50) NOT NULL,\n"
+            + "    PRIMARY KEY (teacherId, scheduleId),\n"
+            + "    FOREIGN KEY (teacherId) REFERENCES teachers(id),\n"
+            + "    FOREIGN KEY (scheduleId) REFERENCES schedules(id)\n"
 
-/*
-    public void createTeacherPreferencedSubjectTable() {
-        String createTableSQL = "CREATE TABLE IF NOT EXISTS teacher_preferencedSubject (\n"
-                + "    teacherId int NOT NULL,\n"
-                + "    subjectId int NOT NULL,\n"
-                + "    PRIMARY KEY (teacherId, subjectId),\n"
+            + ");";
+
+    try (Statement stmt = connection.createStatement()) {
+        stmt.executeUpdate(createTableSQL);
+        System.out.println("Tabla teacherAssignedSchedules creada correctamente");
+    } catch(SQLException e) {
+        e.printStackTrace();
+    }
+}
+
+    public void createTeacherPreferredConditionsTable() {
+        String createTableSQL = "CREATE TABLE IF NOT EXISTS teacherPreferredConditions (\n"
+                + "    teacherId varchar(50) NOT NULL,\n"
+                + "    conditionId varchar(50) NOT NULL,\n"
+                + "    PRIMARY KEY (teacherId, conditionId),\n"
                 + "    FOREIGN KEY (teacherId) REFERENCES teachers(id),\n"
-                + "    FOREIGN KEY (subjectId) REFERENCES subjects(id)\n"
+                + "    FOREIGN KEY (conditionId) REFERENCES conditions(id)\n"
                 + ");";
 
         try (Statement stmt = connection.createStatement()) {
             stmt.executeUpdate(createTableSQL);
-            System.out.println("Tabla teacher_preferencedSubject creada correctamente");
+            System.out.println("Tabla teacherPreferredConditions creada correctamente");
+        } catch(SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void createTeacherUnpreferredConditionsTable() {
+        String createTableSQL = "CREATE TABLE IF NOT EXISTS teacherUnpreferredConditions (\n"
+                + "    teacherId varchar(50) NOT NULL,\n"
+                + "    conditionId varchar(50) NOT NULL,\n"
+                + "    PRIMARY KEY (teacherId, conditionId),\n"
+                + "    FOREIGN KEY (teacherId) REFERENCES teachers(id),\n"
+                + "    FOREIGN KEY (conditionId) REFERENCES conditions(id)\n"
+                + ");";
+
+        try (Statement stmt = connection.createStatement()) {
+            stmt.executeUpdate(createTableSQL);
+            System.out.println("Tabla teacherUnpreferredConditions creada correctamente");
+        } catch(SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void createTeacherUnavailableTimePeriodsTable() {
+        String createTableSQL = "CREATE TABLE IF NOT EXISTS teacherUnavailableTimePeriods (\n"
+                + "    teacherId varchar(50) NOT NULL,\n"
+                + "    timePeriodId varchar(50) NOT NULL,\n"
+                + "    PRIMARY KEY (teacherId, timePeriodId),\n"
+                + "    FOREIGN KEY (teacherId) REFERENCES teachers(id),\n"
+                + "    FOREIGN KEY (timePeriodId) REFERENCES timePeriods(id)\n"
+                + ");";
+
+        try (Statement stmt = connection.createStatement()) {
+            stmt.executeUpdate(createTableSQL);
+            System.out.println("Tabla teacherUnavailableTimePeriods creada correctamente");
         } catch(SQLException e) {
             e.printStackTrace();
         }
     }
 
 
-public void createTeacherPreferencedTimePeriod() {
-    String createTableSQL = "CREATE TABLE IF NOT EXISTS teacher_preferencedTimePeriod (\n"
-            + "    teacherId int NOT NULL,\n"
-            + "    subjectId int NOT NULL,\n"
-            + "    PRIMARY KEY (teacherId, timePeriodId),\n"
-            + "    FOREIGN KEY (teacherId) REFERENCES teachers(id),\n"
-            + "    FOREIGN KEY (timePeriodId) REFERENCES timePeriods(id)\n"
-            + ");";
-
-    try (Statement stmt = connection.createStatement()) {
-        stmt.executeUpdate(createTableSQL);
-        System.out.println("Tabla teacher_preferencedTimePeriod creada correctamente");
-    } catch(SQLException e) {
-        e.printStackTrace();
-    }
-}
-
-*/
 
 
 
@@ -218,6 +248,7 @@ public void createTeacherPreferencedTimePeriod() {
                 + "	abbreviation varchar(50) NOT NULL,\n"
                 + "	classroomType varchar(255), \n"
                 + "	capacity int NOT NULL\n"
+
                 + ");";
 
         try(
@@ -232,6 +263,44 @@ public void createTeacherPreferencedTimePeriod() {
         }
     }
 
+
+    public void createClassroomAssignedSubjectsTable() {
+        String createTableSQL = "CREATE TABLE IF NOT EXISTS classroomAssignedSubjects (\n"
+                + "    classroomId varchar(50) NOT NULL,\n"
+                + "    subjectId varchar(50) NOT NULL,\n"
+                + "    PRIMARY KEY (classroomId, subjectId),\n"
+                + "    FOREIGN KEY (classroomId) REFERENCES classrooms(id),\n"
+                + "    FOREIGN KEY (subjectId) REFERENCES subjects(id)\n"
+                + ");";
+
+        try (Statement stmt = connection.createStatement()) {
+            stmt.executeUpdate(createTableSQL);
+            System.out.println("Tabla classroomAssignedSubjects creada correctamente");
+        } catch(SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void createClassroomAssignedSchedulesTable() {
+        String createTableSQL = "CREATE TABLE IF NOT EXISTS classroomAssignedSchedules (\n"
+                + "    classroomId varchar(50) NOT NULL,\n"
+                + "    scheduleId varchar(50) NOT NULL,\n"
+                + "    PRIMARY KEY (classroomId, scheduleId),\n"
+                + "    FOREIGN KEY (classroomId) REFERENCES classrooms(id),\n"
+                + "    FOREIGN KEY (scheduleId) REFERENCES schedules(id)\n"
+                + ");";
+
+        try (Statement stmt = connection.createStatement()) {
+            stmt.executeUpdate(createTableSQL);
+            System.out.println("Tabla classroomAssignedSchedules creada correctamente");
+        } catch(SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
+
     public void createSubjectTable (){
 
         String createTableSQL = "CREATE TABLE IF NOT EXISTS subjects (\n"
@@ -240,9 +309,12 @@ public void createTeacherPreferencedTimePeriod() {
                 + "	abbreviation varchar(50) NOT NULL,\n"
                 + "	department varchar(50) ,\n"
                 + "	course varchar(255), \n"
+                + "	weeklyAssignedHours int NOT NULL, \n"
+                + "	duration int NOT NULL, \n"
+                + "	maxDailyHours int NOT NULL, \n"
                 + "	assignedClassroom varchar(50) ,\n"
-                + " FOREIGN KEY (assignedClassroom) REFERENCES classrooms(id),\n"
-                + "	weeklyAssignedHours int NOT NULL\n"
+                + " FOREIGN KEY (assignedClassroom) REFERENCES classrooms(id) \n"
+
                 + ");";
 
         try(
@@ -265,10 +337,10 @@ public void createTeacherPreferencedTimePeriod() {
                 + "	abbreviation varchar(50) NOT NULL,\n"
                 + "	course varchar(255), \n"
                 + "	assignedTutor varchar(50) ,\n"
-                + "	FOREIGN KEY (assignedTutor) REFERENCES teachers(id),\n"
+                + "	weeklyGroupHours int NOT NULL ,\n"
                 + "	numberOfStudents int NOT NULL,\n"
-                + "	weeklyGroupHours int NOT NULL\n"
-                //+ "	FOREIGN KEY (subjects) REFERENCES studentGroupSubjects(id)\n"
+                + " FOREIGN KEY (assignedTutor) REFERENCES teachers(id) \n"
+
                 + ");";
 
         try (
@@ -282,19 +354,132 @@ public void createTeacherPreferencedTimePeriod() {
         }
     }
 
-        public void createStudentGroupSubjectTable() {
-            String createTableSQL = "CREATE TABLE IF NOT EXISTS studentGroupSubjects (\n"
-                    + "    groupId varchar(50) NOT NULL,\n"
+        public void createStudentGroupRequiredSubjectsTable() {
+            String createTableSQL = "CREATE TABLE IF NOT EXISTS studentGroupRequiredSubjects (\n"
+                    + "    studentGroupId varchar(50) NOT NULL,\n"
                     + "    subjectId varchar(50) NOT NULL,\n"
-                    + "    PRIMARY KEY (groupId, subjectId),\n"
-                    + "    FOREIGN KEY (groupId) REFERENCES studentGroups(id),\n"
+                    + "    PRIMARY KEY (studentGroupId, subjectId),\n"
+                    + "    FOREIGN KEY (studentGroupId) REFERENCES studentGroups(id),\n"
                     + "    FOREIGN KEY (subjectId) REFERENCES subjects(id)\n"
                     + ");";
 
             try (Statement stmt = connection.createStatement()) {
                 stmt.executeUpdate(createTableSQL);
-                System.out.println("Tabla studentgroup_subject creada correctamente");
+                System.out.println("Tabla studentGroupRequiredSubjects creada correctamente");
             } catch(SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+
+        public void createStudentGroupAssignedSchedulesTable() {
+            String createTableSQL = "CREATE TABLE IF NOT EXISTS studentGroupAssignedSchedules (\n"
+                    + "    studentGroupId varchar(50) NOT NULL,\n"
+                    + "    scheduleId varchar(50) NOT NULL,\n"
+                    + "    PRIMARY KEY (studentGroupId, scheduleId),\n"
+                    + "    FOREIGN KEY (studentGroupId) REFERENCES studentGroups(id),\n"
+                    + "    FOREIGN KEY (scheduleId) REFERENCES schedules(id)\n"
+                    + ");";
+
+            try (Statement stmt = connection.createStatement()) {
+                stmt.executeUpdate(createTableSQL);
+                System.out.println("Tabla studentGroupAssignedSchedules creada correctamente");
+            } catch(SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void createScheduleTable () {
+
+            String createTableSQL = "CREATE TABLE IF NOT EXISTS schedules (\n"
+                    + "	id varchar(50) PRIMARY KEY,\n"
+                    + "	name varchar(255) NOT NULL,\n"
+                    + "	achievedConditions int NOT NULL ,\n"
+                    + "	weightedConditions int NOT NULL \n"
+
+                    + ");";
+
+            try (
+                    Statement stmt = connection.createStatement()
+            ) {
+                stmt.executeUpdate(createTableSQL);
+                System.out.println("Hemos creado bien la tabla");
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void createScheduleAssignedLessonsTable() {
+            String createTableSQL = "CREATE TABLE IF NOT EXISTS scheduleAssignedLessons (\n"
+                    + "    scheduleId varchar(50) NOT NULL,\n"
+                    + "    lessonId varchar(50) NOT NULL,\n"
+                    + "    PRIMARY KEY (scheduleId, lessonId),\n"
+                    + "    FOREIGN KEY (scheduleId) REFERENCES schedules(id),\n"
+                    + "    FOREIGN KEY (lessonId) REFERENCES lessons(id)\n"
+                    + ");";
+
+            try (Statement stmt = connection.createStatement()) {
+                stmt.executeUpdate(createTableSQL);
+                System.out.println("Tabla scheduleAssignedLessons creada correctamente");
+            } catch(SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+
+        public void createLessonTable () {
+
+            String createTableSQL = "CREATE TABLE IF NOT EXISTS lessons (\n"
+                    + "	id varchar(50) PRIMARY KEY,\n"
+                    + "	idTeacher varchar(255) NOT NULL,\n"
+                    + "	idStudentGroup varchar(255) NOT NULL,\n"
+                    + "	idSubject varchar(255) NOT NULL,\n"
+                    + "	idClassroom varchar(255) NOT NULL,\n"
+                    + "	idTimePeriod varchar(255) NOT NULL,\n"
+                    + " FOREIGN KEY (idTeacher) REFERENCES teachers(id),\n"
+                    + " FOREIGN KEY (idStudentGroup) REFERENCES studentGroups(id),\n"
+                    + " FOREIGN KEY (idSubject) REFERENCES subjects(id),\n"
+                    + " FOREIGN KEY (idClassroom) REFERENCES classrooms(id),\n"
+                    + " FOREIGN KEY (idTimePeriod) REFERENCES timePeriods(id)\n"
+
+                    + ");";
+
+            try (
+                    Statement stmt = connection.createStatement()
+            ) {
+                stmt.executeUpdate(createTableSQL);
+                System.out.println("Hemos creado bien la tabla");
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+
+        public void createConditionTable () {
+
+            String createTableSQL = "CREATE TABLE IF NOT EXISTS conditions (\n"
+                    + "	id varchar(50) PRIMARY KEY,\n"
+                    + "	teacher varchar(255) NOT NULL,\n"
+                    + "	weight int NOT NULL,\n"
+                    + "	subject varchar(255) NOT NULL,\n"
+                    + "	timePeriod varchar(255) NOT NULL,\n"
+                    + "	studentGroup varchar(255) NOT NULL,\n"
+                    + " FOREIGN KEY (teacher) REFERENCES teachers(id),\n"
+                    + " FOREIGN KEY (subject) REFERENCES subjects(id),\n"
+                    + " FOREIGN KEY (studentGroup) REFERENCES studentGroups(id),\n"
+                    + " FOREIGN KEY (timePeriod) REFERENCES timePeriods(id)\n"
+
+                    + ");";
+
+            try (
+                    Statement stmt = connection.createStatement()
+            ) {
+                stmt.executeUpdate(createTableSQL);
+                System.out.println("Hemos creado bien la tabla");
+
+            } catch (SQLException e) {
                 e.printStackTrace();
             }
         }
@@ -304,20 +489,24 @@ public void createTeacherPreferencedTimePeriod() {
 
     public void createAllTables(){
         createClassroomTable ();
-        createActivityTable();
         createTeacherTable ();
-        createTeachersInActivity();
         createSubjectTable ();
-        createTeacherPossibleSubjectTable();
-
-        //createTeacherPreferencedSubjectTable();
-        //createTeacherPreferencedTimePeriod();
-
-
-
         createStudentGroupTable ();
         createTimePeriodTable ();
-        createStudentGroupSubjectTable();
+        createScheduleTable();
+        createLessonTable();
+        createConditionTable();
+        createClassroomAssignedSubjectsTable();
+        createClassroomAssignedSchedulesTable();
+        createStudentGroupRequiredSubjectsTable();
+        createStudentGroupAssignedSchedulesTable();
+        createTeacherPossibleSubjectTable();
+        createTeacherAssignedSchedulesTable();
+        createTeacherPreferredConditionsTable();
+        createTeacherUnpreferredConditionsTable();
+        createTeacherUnavailableTimePeriodsTable();
+        createScheduleAssignedLessonsTable();
+
        }
 
 }

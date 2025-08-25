@@ -69,8 +69,6 @@ public class TimePeriodDAO implements DAO<TimePeriod>{
                 String idStudentGroup = resultset.getString("idStudentGroup");
                 String idClassroom = resultset.getString("idClassroom");
 
-
-
                 TimePeriod timePeriod = new TimePeriod(id, weekDay, initialHour, finalHour);
                 timePeriod.setIdTeacher(idTeacher);
                 timePeriod.setIdSubject(idSubject);
@@ -83,18 +81,6 @@ public class TimePeriodDAO implements DAO<TimePeriod>{
 
         }
         return timePeriods;
-
-    }
-
-    @Override
-    public void delete (TimePeriod timePeriod) throws SQLException{
-        String query = "DELETE FROM timePeriods WHERE id = ?";
-        try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-            preparedStatement.setString(1,timePeriod.getId());
-            preparedStatement.executeUpdate();
-
-
-        }
 
     }
 
@@ -130,6 +116,18 @@ public class TimePeriodDAO implements DAO<TimePeriod>{
             }else{
                 return null;
             }
+        }
+
+    }
+
+    @Override
+    public void delete (TimePeriod timePeriod) throws SQLException{
+        String query = "DELETE FROM timePeriods WHERE id = ?";
+        try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1,timePeriod.getId());
+            preparedStatement.executeUpdate();
+
+
         }
 
     }

@@ -1,23 +1,19 @@
 package persistence.DAO;
 
-import business.Schedule;
-import business.StudentGroup;
-import business.Subject;
-import business.Teacher;
+import business.*;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class StudentGroupDAO implements DAO<StudentGroup>{
+public class StudentGroupDAO implements DAO<StudentGroup> {
 
     private Connection connection;
     private TeacherDAO teacherDAO;
-    private StudentGroupRequiredSubjectsDAO studentGroupRequiredSubjectsDAO;
-    private StudentGroupAssignedSchedulesDAO studentGroupAssignedSchedulesDAO;
+    private final StudentGroupRequiredSubjectsDAO studentGroupRequiredSubjectsDAO;
+    private final StudentGroupAssignedSchedulesDAO studentGroupAssignedSchedulesDAO;
 
     public StudentGroupDAO(Connection connection) {
-
         this.connection = connection;
         this.teacherDAO = new TeacherDAO(connection);
         this.studentGroupRequiredSubjectsDAO = new StudentGroupRequiredSubjectsDAO(connection, new SubjectDAO(connection));
@@ -25,24 +21,24 @@ public class StudentGroupDAO implements DAO<StudentGroup>{
     }
 
     @Override
-    public void add (StudentGroup studentGroup) throws SQLException {
+    public void add(StudentGroup studentGroup) throws SQLException {
         String query = "INSERT INTO studentGroups (id, name, abbreviation, course, assignedTutor, weeklyGroupHours, numberOfStudents) VALUES (?, ?, ?, ?, ?, ?, ?)";
-        try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-            preparedStatement.setString(1,studentGroup.getId());
-            preparedStatement.setString(2,studentGroup.getName());
-            preparedStatement.setString(3,studentGroup.getAbbreviation());
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, studentGroup.getId());
+            preparedStatement.setString(2, studentGroup.getName());
+            preparedStatement.setString(3, studentGroup.getAbbreviation());
             preparedStatement.setString(4, studentGroup.getCourse());
-            preparedStatement.setString(5,studentGroup.getAssignedTutor().getId());
-            preparedStatement.setInt(6,studentGroup.getWeeklyGroupHours());
-            preparedStatement.setInt(7,studentGroup.getNumberOfStudents());
+            preparedStatement.setString(5, studentGroup.getAssignedTutor().getId());
+            preparedStatement.setInt(6, studentGroup.getWeeklyGroupHours());
+            preparedStatement.setInt(7, studentGroup.getNumberOfStudents());
 
-            for(Subject subject :studentGroup.getRequiredSubjects()){
-                studentGroupRequiredSubjectsDAO.studentGroupRequiredSubjects(studentGroup.getId(), subject.getId());
+            for (Subject subject : studentGroup.getRequiredSubjects()) {
+                studentGroupRequiredSubjectsDAO.addRequiredSubjects(studentGroup.getId(), subject.getId());
 
             }
 
-            for(Schedule schedule :studentGroup.getSchedules()){
-                studentGroupAssignedSchedulesDAO.studentGroupAssignedSchedules(studentGroup.getId(), schedule.getId());
+            for (Schedule schedule : studentGroup.getSchedules()) {
+                studentGroupAssignedSchedulesDAO.addAssignedSchedules(studentGroup.getId(), schedule.getId());
 
 
             }
@@ -55,7 +51,7 @@ public class StudentGroupDAO implements DAO<StudentGroup>{
     @Override
     public void update(StudentGroup studentGroup) throws SQLException {
         String query = "UPDATE studentGroups SET name = ?, abbreviation = ?, course = ?, assignedTutor = ?, weeklyGroupHours = ?, numberOfStudents = ? WHERE id = ?";
-        try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1, studentGroup.getName());
             preparedStatement.setString(2, studentGroup.getAbbreviation());
             preparedStatement.setString(3, studentGroup.getCourse());
@@ -70,11 +66,11 @@ public class StudentGroupDAO implements DAO<StudentGroup>{
     }
 
     @Override
-    public List<StudentGroup> getAll() throws SQLException{
+    public List<StudentGroup> getAll() throws SQLException {
         List<StudentGroup> studentGroups = new ArrayList<>();
         String query = "SELECT * FROM studentGroups";
-        try(Statement createStatement = connection.createStatement();
-            ResultSet resultset = createStatement.executeQuery(query)) {
+        try (Statement createStatement = connection.createStatement();
+             ResultSet resultset = createStatement.executeQuery(query)) {
 
             while (resultset.next()) {
                 String id = resultset.getString("id");
@@ -98,16 +94,6 @@ public class StudentGroupDAO implements DAO<StudentGroup>{
 
         }
         return studentGroups;
-
-    }
-
-    @Override
-    public void delete (StudentGroup studentGroup) throws SQLException{
-        String query = "DELETE FROM studentGroups WHERE id = ?";
-        try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-            preparedStatement.setString(1,studentGroup.getId());
-            preparedStatement.executeUpdate();
-        }
 
     }
 
@@ -137,12 +123,26 @@ public class StudentGroupDAO implements DAO<StudentGroup>{
                 studentGroup.setNumberOfStudents(numberOfStudents);
 
                 return studentGroup;
-            }else{
+            } else {
                 return null;
             }
-}
-
         }
 
+    }
+
+    @Override
+    public void delete (StudentGroup studentGroup) throws SQLException {
+        String query = "DELETE FROM studentGroups WHERE id = ?";
+            try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+                preparedStatement.setString(1,studentGroup.getId());
+                preparedStatement.executeUpdate();
+            }
+
+    }
+
 
 }
+
+
+
+

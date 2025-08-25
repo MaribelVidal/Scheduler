@@ -9,19 +9,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ClassroomDAO implements DAO<Classroom>{
-   private final ClassroomAssignedSubjectsDAO classroomAssignedSubjectsDAO;
-   private final ClassroomAssignedSchedulesDAO classroomAssignedSchedulesDAO;
+   private Connection connection;
+   private  ClassroomAssignedSubjectsDAO classroomAssignedSubjectsDAO;
+   private  ClassroomAssignedSchedulesDAO classroomAssignedSchedulesDAO;
 
-
-
-    private Connection connection;
 
 
     public ClassroomDAO(Connection connection) {
-
         this.connection = connection;
-        this.classroomAssignedSubjectsDAO = new ClassroomAssignedSubjectsDAO(connection, new SubjectDAO(connection));
-        this.classroomAssignedSchedulesDAO = new ClassroomAssignedSchedulesDAO(connection, new ScheduleDAO(connection));
+
+    }
+
+    public void setClassroomAssignedSubjectsDAO(ClassroomAssignedSubjectsDAO classroomAssignedSubjectsDAO) {
+        this.classroomAssignedSubjectsDAO = classroomAssignedSubjectsDAO;
+    }
+    public void setClassroomAssignedSchedulesDAO(ClassroomAssignedSchedulesDAO classroomAssignedSchedulesDAO) {
+        this.classroomAssignedSchedulesDAO = classroomAssignedSchedulesDAO;
     }
 
     @Override
@@ -35,20 +38,30 @@ public class ClassroomDAO implements DAO<Classroom>{
             preparedStatement.setInt(5,classroom.getCapacity());
 
             for(Subject subject :classroom.getAssignedSubjects()){
-                classroomAssignedSubjectsDAO.classroomAssignedSubjects(classroom.getId(), subject.getId());
-
+                classroomAssignedSubjectsDAO.addAssignedSubjects(classroom.getId(), subject.getId());
             }
 
             for(Schedule schedule :classroom.getSchedules()){
-                classroomAssignedSchedulesDAO.classroomAssignedSchedules(classroom.getId(), schedule.getId());
-
-
+                classroomAssignedSchedulesDAO.addAssignedSchedules(classroom.getId(), schedule.getId());
             }
-
 
             preparedStatement.executeUpdate();
         }
 
+    }
+
+    @Override
+    public void update(Classroom classroom) throws SQLException {
+        String query = "UPDATE classrooms SET name = ?, abbreviation = ?, classroomType = ?, capacity = ? WHERE id = ?";
+        try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, classroom.getName());
+            preparedStatement.setString(2, classroom.getAbbreviation());
+            preparedStatement.setString(3, classroom.getClassroomType());
+            preparedStatement.setInt(4, classroom.getCapacity());
+            preparedStatement.setString(5, classroom.getId());
+
+            preparedStatement.executeUpdate();
+        }
     }
 
     @Override
@@ -76,30 +89,6 @@ public class ClassroomDAO implements DAO<Classroom>{
 
         }
         return classrooms;
-
-    }
-
-    @Override
-    public void update(Classroom classroom) throws SQLException {
-        String query = "UPDATE classrooms SET name = ?, abbreviation = ?, classroomType = ?, capacity = ? WHERE id = ?";
-        try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-            preparedStatement.setString(1, classroom.getName());
-            preparedStatement.setString(2, classroom.getAbbreviation());
-            preparedStatement.setString(3, classroom.getClassroomType());
-            preparedStatement.setInt(4, classroom.getCapacity());
-            preparedStatement.setString(5, classroom.getId());
-
-            preparedStatement.executeUpdate();
-        }
-    }
-
-    @Override
-    public void delete (Classroom classroom) throws SQLException{
-        String query = "DELETE FROM classrooms WHERE id = ?";
-        try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-            preparedStatement.setString(1,classroom.getId());
-            preparedStatement.executeUpdate();
-        }
 
     }
 
@@ -132,4 +121,14 @@ public class ClassroomDAO implements DAO<Classroom>{
 
         }
     }
+
+    @Override
+    public void delete (Classroom classroom) throws SQLException{
+        String query = "DELETE FROM classrooms WHERE id = ?";
+        try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1,classroom.getId());
+            preparedStatement.executeUpdate();
+        }
+    }
+
 }

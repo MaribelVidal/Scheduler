@@ -1,7 +1,6 @@
 package persistence.DAO;
 
-import business.Subject;
-import business.Teacher;
+import business.*;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -9,7 +8,7 @@ import java.util.List;
 
 public class TeacherDAO implements DAO<Teacher>{
     private Connection connection;
-    private final PossibleTeacherSubjectsDAO possibleTeacherSubjectsDAO;
+    private final TeacherPossibleSubjectsDAO teacherPossibleSubjectsDAO;
     private final TeacherPreferredConditionsDAO teacherPreferredConditionsDAO;
     private final TeacherUnpreferredConditionsDAO teacherUnpreferredConditionsDAO;
     private final TeacherAssignedSchedulesDAO teacherAssignedSchedulesDAO;
@@ -18,7 +17,7 @@ public class TeacherDAO implements DAO<Teacher>{
 
     public TeacherDAO(Connection connection) {
         this.connection = connection;
-        this.possibleTeacherSubjectsDAO = new PossibleTeacherSubjectsDAO(connection, new SubjectDAO(connection));
+        this.teacherPossibleSubjectsDAO = new TeacherPossibleSubjectsDAO(connection, new SubjectDAO(connection));
         this.teacherPreferredConditionsDAO = new TeacherPreferredConditionsDAO(connection, new ConditionDAO(connection));
         this.teacherUnpreferredConditionsDAO = new TeacherUnpreferredConditionsDAO(connection, new ConditionDAO(connection));
         this.teacherAssignedSchedulesDAO = new TeacherAssignedSchedulesDAO(connection, new ScheduleDAO(connection));
@@ -58,21 +57,22 @@ public class TeacherDAO implements DAO<Teacher>{
             preparedStatement.executeUpdate();
 
             for(Subject subject :teacher.getPossibleSubjects()){
-                possibleTeacherSubjectsDAO.assignTeacherSubjects(teacher.getId(), subject.getId());
+                teacherPossibleSubjectsDAO.addPossibleSubjects(teacher.getId(), subject.getId());
 
             }
 
-            for (String conditionId : teacher.getPreferredConditions()) {
-                teacherPreferredConditionsDAO.assignTeacherCondition(teacher.getId(), conditionId);
+            for (Condition condition : teacher.getPreferredConditions()) {
+                teacherPreferredConditionsDAO.addPreferredConditions(teacher.getId(), condition.getId());
             }
-            for (String conditionId : teacher.getUnpreferredConditions()) {
-                teacherUnpreferredConditionsDAO.assignTeacherCondition(teacher.getId(), conditionId);
+            for (Condition condition : teacher.getUnPreferredConditions()) {
+                teacherUnpreferredConditionsDAO.addUnpreferredConditions(teacher.getId(), condition.getId());
             }
 
-
-
-            for (String scheduleId : teacher.getAssignedSchedules()) {
-                teacherAssignedSchedulesDAO.assignTeacherSchedule(teacher.getId(), scheduleId);
+            for (Schedule schedule : teacher.getSchedules()) {
+                teacherAssignedSchedulesDAO.addAssignedSchedules(teacher.getId(), schedule.getId());
+            }
+            for (TimePeriod timePeriod : teacher.getUnavailableTimePeriods()) {
+                teacherUnavailableTimePeriodsDAO.addUnavailableTimePeriods(teacher.getId(), timePeriod.getId());
             }
 
 
@@ -107,14 +107,32 @@ public class TeacherDAO implements DAO<Teacher>{
 
             preparedStatement.setString(7, teacher.getId());
 
+
+
+            for(Subject subject :teacher.getPossibleSubjects()){
+                teacherPossibleSubjectsDAO.updatePossibleSubjects(teacher.getId(), subject.getId());
+
+            }
+
+            for (Condition condition : teacher.getPreferredConditions()) {
+                teacherPreferredConditionsDAO.updatePreferredConditions(teacher.getId(), condition.getId());
+            }
+            for (Condition condition : teacher.getUnPreferredConditions()) {
+                teacherUnpreferredConditionsDAO.updateUnpreferredConditions(teacher.getId(), condition.getId());
+            }
+
+            for (Schedule schedule : teacher.getSchedules()) {
+                teacherAssignedSchedulesDAO.updateAssignedSchedules(teacher.getId(), schedule.getId());
+            }
+            for (TimePeriod timePeriod : teacher.getUnavailableTimePeriods()) {
+                teacherUnavailableTimePeriodsDAO.updateUnavailableTimePeriods(teacher.getId(), timePeriod.getId());
+            }
+
+
             preparedStatement.executeUpdate();
         }
     }
 
-    @Override
-    public Teacher getOne(String id, String id2, String type) throws Exception {
-        return null;
-    }
 
     @Override
     public List<Teacher> getAll() throws SQLException{
@@ -141,7 +159,11 @@ public class TeacherDAO implements DAO<Teacher>{
                 if(department == null || department.isEmpty()){
                     department = null;
                 }
-                List<Subject> subjects = possibleTeacherSubjectsDAO.getAllTeacherSubjects(id);
+                List<Subject> subjects = teacherPossibleSubjectsDAO.getAllPossibleSubjects(id);
+                List<Condition> preferredConditions = teacherPreferredConditionsDAO.getAllPreferredConditions(id);
+                List<Condition> unPreferredConditions = teacherUnpreferredConditionsDAO.getAllUnpreferredConditions(id);
+                List<Schedule> schedules = teacherAssignedSchedulesDAO.getAllAssignedSchedules(id);
+                List<TimePeriod> unavailableTimePeriods = teacherUnavailableTimePeriodsDAO.getAllUnavailableTimePeriods(id);
 
                 Teacher teacher = new Teacher(id, name, abbreviation);
                 teacher.setEmail(email);
@@ -149,22 +171,18 @@ public class TeacherDAO implements DAO<Teacher>{
                 teacher.setHoursWork(hoursWork);
                 teacher.setDepartment(department);
                 teacher.setPossibleSubjects(subjects);
+                teacher.setPreferredConditions(preferredConditions);
+                teacher.setUnPreferredConditions(unPreferredConditions);
+                teacher.setSchedules(schedules);
+                teacher.setUnavailableTimePeriods(unavailableTimePeriods);
                 teachers.add(teacher);
             }
 
 
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
         return teachers;
-
-    }
-
-    @Override
-    public void delete (Teacher teacher) throws SQLException{
-        String query = "DELETE FROM teachers WHERE id = ?";
-        try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-            preparedStatement.setString(1,teacher.getId());
-            preparedStatement.executeUpdate();
-        }
 
     }
 
@@ -195,7 +213,11 @@ public class TeacherDAO implements DAO<Teacher>{
                 if (department == null || department.isEmpty()) {
                     department = null;
                 }
-                List<Subject> subjects = possibleTeacherSubjectsDAO.getAllTeacherSubjects(id);
+                List<Subject> subjects = teacherPossibleSubjectsDAO.getAllPossibleSubjects(id);
+                List<Condition> preferredConditions = teacherPreferredConditionsDAO.getAllPreferredConditions(id);
+                List<Condition> unPreferredConditions = teacherUnpreferredConditionsDAO.getAllUnpreferredConditions(id);
+                List<Schedule> schedules = teacherAssignedSchedulesDAO.getAllAssignedSchedules(id);
+                List<TimePeriod> unavailableTimePeriods = teacherUnavailableTimePeriodsDAO.getAllUnavailableTimePeriods(id);
 
                 Teacher teacher = new Teacher(id, name, abbreviation);
                 teacher.setEmail(email);
@@ -203,12 +225,37 @@ public class TeacherDAO implements DAO<Teacher>{
                 teacher.setHoursWork(hoursWork);
                 teacher.setDepartment(department);
                 teacher.setPossibleSubjects(subjects);
+                teacher.setPreferredConditions(preferredConditions);
+                teacher.setUnPreferredConditions(unPreferredConditions);
+                teacher.setSchedules(schedules);
+                teacher.setUnavailableTimePeriods(unavailableTimePeriods);
 
                 return teacher;
 
             }else {
                 return null;
             }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
+
+    @Override
+    public void delete (Teacher teacher) throws SQLException{
+        String query = "DELETE FROM teachers WHERE id = ?";
+
+        teacherPreferredConditionsDAO.deleteTeacher(teacher.getId());
+        teacherUnpreferredConditionsDAO.deleteTeacher(teacher.getId());
+        teacherAssignedSchedulesDAO.deleteTeacher(teacher.getId());
+        teacherUnavailableTimePeriodsDAO.deleteTeacher(teacher.getId());
+        teacherPossibleSubjectsDAO.deleteTeacher(teacher.getId());
+
+        try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1,teacher.getId());
+            preparedStatement.executeUpdate();
+        }
+
+    }
+
+
 }

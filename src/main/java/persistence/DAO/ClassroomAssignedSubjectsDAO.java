@@ -20,7 +20,7 @@ public class ClassroomAssignedSubjectsDAO {
         }
 
 
-        public void classroomAssignedSubjects(String classroomId, String subjectId) throws SQLException {
+        public void addAssignedSubjects(String classroomId, String subjectId) throws SQLException {
             String query = "INSERT INTO classroomAssignedSubjects (classroomId, subjectId) VALUES (?, ?)";
             try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
                 preparedStatement.setString(1,classroomId);
@@ -30,6 +30,15 @@ public class ClassroomAssignedSubjectsDAO {
                 preparedStatement.executeUpdate();
             }
 
+        }
+
+        public void updateAssignedSubjects (String classroomId, String subjectId) throws SQLException {
+            String query = "UPDATE classroomAssignedSubjects SET subjectId = ? WHERE classroomId = ?";
+            try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+                preparedStatement.setString(1, subjectId);
+                preparedStatement.setString(2, classroomId);
+                preparedStatement.executeUpdate();
+            }
         }
 
         public List<Subject> getAllAssignedSubjects(String classroomId) throws SQLException{
@@ -57,7 +66,7 @@ public class ClassroomAssignedSubjectsDAO {
 
 
 
-        public void deleteAssignedSubject (String classroomId, String subjectId) throws SQLException{
+        public void deleteAssignedSubjects (String classroomId, String subjectId) throws SQLException{
             String query = "DELETE FROM classroomAssignedSubjects WHERE classroomId = ? AND subjectId = ?";
             try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
                 preparedStatement.setString(1, classroomId );
@@ -66,6 +75,15 @@ public class ClassroomAssignedSubjectsDAO {
             }
 
         }
+
+    public void deleteClassroom (String classroomId) throws SQLException {
+        String query = "DELETE FROM classroomAssignedSubjects WHERE classroomId = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, classroomId);
+            preparedStatement.executeUpdate();
+        }
+
+    }
 
 
     }

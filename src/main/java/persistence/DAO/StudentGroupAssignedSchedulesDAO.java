@@ -14,7 +14,7 @@ import java.util.List;
 public class StudentGroupAssignedSchedulesDAO {
 
     private Connection connection;
-    private SubjectDAO scheduleDAO;
+    private ScheduleDAO scheduleDAO;
 
     public StudentGroupAssignedSchedulesDAO(Connection connection, ScheduleDAO scheduleDAO) {
         this.connection = connection;
@@ -22,7 +22,7 @@ public class StudentGroupAssignedSchedulesDAO {
     }
 
 
-    public void studentGroupAssignedSchedules(String studentGroupId, String scheduleId) throws SQLException {
+    public void addAssignedSchedules(String studentGroupId, String scheduleId) throws SQLException {
         String query = "INSERT INTO studentGroupAssignedSchedules (studentGroupId, scheduleId) VALUES (?, ?)";
         try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1,studentGroupId);
@@ -33,8 +33,17 @@ public class StudentGroupAssignedSchedulesDAO {
 
     }
 
-    public List<Subject> getAllAssignedSchedules(String studentGroupId) throws SQLException{
-        List<Subject> schedules = new ArrayList<>();
+    public void updateAssignedSchedules(String studentGroupId, String scheduleId) throws SQLException {
+        String query = "UPDATE studentGroupAssignedSchedules SET scheduleId = ? WHERE studentGroupId = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, scheduleId);
+            preparedStatement.setString(2, studentGroupId);
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    public List<Schedule> getAllAssignedSchedules(String studentGroupId) throws SQLException{
+        List<Schedule> schedules = new ArrayList<>();
         String query = "SELECT * FROM studentGroupAssignedSchedules WHERE studentGroupId = ? " ;
 
         try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
@@ -58,7 +67,7 @@ public class StudentGroupAssignedSchedulesDAO {
 
 
 
-    public void deleteAssignedSchedule (String studentGroupId, String scheduleId) throws SQLException{
+    public void deleteAssignedSchedules (String studentGroupId, String scheduleId) throws SQLException{
         String query = "DELETE FROM studentGroupAssignedSchedules WHERE studentGroupId = ? AND scheduleId = ?";
         try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1, studentGroupId );
@@ -66,6 +75,14 @@ public class StudentGroupAssignedSchedulesDAO {
             preparedStatement.executeUpdate();
         }
 
+    }
+
+    public void deleteStudentGroup (String studentGroupId) throws SQLException {
+        String query = "DELETE FROM studentGroupAssignedSubjects WHERE studentGroupId = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, studentGroupId);
+            preparedStatement.executeUpdate();
+        }
     }
 
 

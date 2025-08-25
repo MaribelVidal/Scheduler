@@ -1,359 +1,419 @@
-
 package presentation;
 
-import business.Teacher;
-
 import javax.swing.*;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
-import javax.swing.table.TableRowSorter;
+import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.regex.Pattern;
+import java.util.*;
+import business.Teacher;
+import business.TimePeriod;
+import business.Subject;
+import business.StudentGroup;
 
-/**
- * ProfesoresPanel (Presentation-aware)
- * -----------------------------------
- * Same UI as before, but now wired to PresentationController, which
- * delegates to BusinessController and holds a reference to Calendar.
- *
- * After add/edit/delete, we call presentationController.refreshTeachersUI()
- * so the Calendar can immediately refresh its "Profesores" dropdown.
- */
 public class ProfesoresPanel extends JPanel {
-    private final PresentationController presentationController;
-    private final JTable table;
-    private final TeacherTableModel model;
-    private final TableRowSorter<TeacherTableModel> sorter;
 
-    // Form fields
-    private final JTextField txtId = new JTextField();
-    private final JTextField txtNombre = new JTextField();
-    private final JTextField txtEmail = new JTextField();
-    private final JTextField txtTelefono = new JTextField();
-    private final JTextField txtDepartamento = new JTextField();
-    private final JSpinner spHoras = new JSpinner(new SpinnerNumberModel(0, 0, 1000, 1));
-    private final JTextField txtAchieved = new JTextField();
-    private final JTextField txtWeighted = new JTextField();
+    private final PresentationController controller;
+    private JTable table;
+    private TeacherTableModel model;
 
-    private final JButton btnNuevo = new JButton("Nuevo");
+    private JTextField tfNombre, tfAbrev, tfEmail, tfPhone, tfDepto;
+    private JSpinner spHoras;
+    private JLabel lblCondLogr, lblCondPond;
+
     private final JButton btnGuardar = new JButton("Guardar cambios");
+    private final JButton btnNuevo = new JButton("Nuevo");
     private final JButton btnEliminar = new JButton("Eliminar");
+    private final JButton btnEditPeriodos = new JButton("Editar períodos...");
+    private final JButton btnEditAsignaturas = new JButton("Editar asignaturas...");
+    private final JButton btnEditGrupos = new JButton("Editar grupos...");
+    private final JButton btnEditPosibles = new JButton("Asignaturas posibles...");
 
-    public ProfesoresPanel(PresentationController presentationController) {
-        this.presentationController = Objects.requireNonNull(presentationController, "presentationController");
+    public ProfesoresPanel(PresentationController controller) {
+        this.controller = controller;
+        setLayout(new BorderLayout());
 
-        setLayout(new BorderLayout(12, 12));
-
-        // Table + model
-        model = new TeacherTableModel(presentationController.getTeachers());
+        model = new TeacherTableModel(controller.getTeachers());
         table = new JTable(model);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        table.setAutoCreateRowSorter(true);
-        sorter = new TableRowSorter<>(model);
-        table.setRowSorter(sorter);
-        table.setFillsViewportHeight(true);
 
-        // Left: table
+        int posiblesCol = model.columnIndex("Posibles");
+        if (posiblesCol >= 0) {
+            table.getColumnModel().getColumn(posiblesCol)
+                    .setCellRenderer(new DefaultTableCellRenderer() {
+                        @Override
+                        public Component getTableCellRendererComponent(JTable tbl, Object value,
+                                                                       boolean isSelected, boolean hasFocus,
+                                                                       int row, int column) {
+                            Component c = super.getTableCellRendererComponent(tbl, value, isSelected, hasFocus, row, column);
+                            int modelRow = tbl.convertRowIndexToModel(row);
+                            Teacher t = model.getAt(modelRow);
+                            setToolTipText(subjectsTooltip(t.getPossibleSubjects()));
+                            return c; // keep the default text (the count)
+                        }
+                    });
+        }
+
         add(new JScrollPane(table), BorderLayout.CENTER);
 
-        // Right: details form
-        JPanel form = buildFormPanel();
+        JPanel form = new JPanel(new GridLayout(0, 2));
+        tfNombre = new JTextField();
+        tfAbrev = new JTextField();
+        tfEmail = new JTextField();
+        tfPhone = new JTextField();
+        tfDepto = new JTextField();
+        spHoras = new JSpinner(new SpinnerNumberModel(25, 0, 40, 1));
+        lblCondLogr = new JLabel("-");
+        lblCondPond = new JLabel("-");
+
+        form.add(new JLabel("Nombre:"));
+        form.add(tfNombre);
+        form.add(new JLabel("Abrev:"));
+        form.add(tfAbrev);
+        form.add(new JLabel("Email:"));
+        form.add(tfEmail);
+        form.add(new JLabel("Teléfono:"));
+        form.add(tfPhone);
+        form.add(new JLabel("Departamento:"));
+        form.add(tfDepto);
+        form.add(new JLabel("Horas trabajo:"));
+        form.add(spHoras);
+        form.add(new JLabel("Cond. logradas:"));
+        form.add(lblCondLogr);
+        form.add(new JLabel("Cond. ponderadas:"));
+        form.add(lblCondPond);
+
+        JPanel buttons = new JPanel();
+        buttons.add(btnGuardar);
+        buttons.add(btnNuevo);
+        buttons.add(btnEliminar);
+        buttons.add(btnEditPeriodos);
+        buttons.add(btnEditAsignaturas);
+        buttons.add(btnEditGrupos);
+        buttons.add(btnEditPosibles);
+
         add(form, BorderLayout.EAST);
+        add(buttons, BorderLayout.SOUTH);
 
-        // Top bar (optional filter)
-        add(buildTopBar(), BorderLayout.NORTH);
+        table.getSelectionModel().addListSelectionListener(e -> loadSelected());
 
-        // Hook selection -> form
-        table.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+        btnGuardar.addActionListener(e -> saveSelected());
+        btnNuevo.addActionListener(e -> newTeacher());
+        btnEliminar.addActionListener(e -> deleteSelected());
+        btnEditPeriodos.addActionListener(e -> editPeriodos());
+        btnEditAsignaturas.addActionListener(e -> editAsignaturas());
+        btnEditGrupos.addActionListener(e -> editGrupos());
+        btnEditPosibles.addActionListener(e -> editAsignaturasPosibles());
+    }
+
+    private void editAsignaturasPosibles() {
+        int row = table.getSelectedRow();
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this, "Selecciona un profesor primero.");
+            return;
+        }
+        Teacher t = model.getAt(row);
+
+        // All subjects from controller
+        List<Subject> all = controller.getSubjects();
+        JList<Subject> list = new JList<>(new Vector<>(all));
+        list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+
+        // Nice labels
+        list.setCellRenderer(new DefaultListCellRenderer() {
             @Override
-            public void valueChanged(ListSelectionEvent e) {
-                if (!e.getValueIsAdjusting()) {
-                    loadSelectedTeacherIntoForm();
+            public Component getListCellRendererComponent(JList<?> list, Object value,
+                                                          int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof Subject s) setText(subjectLabel(s));
+                return this;
+            }
+        });
+
+        // Preselect current possible subjects (by id if available)
+        java.util.Set<String> currentIds = new java.util.HashSet<>();
+        if (t.getPossibleSubjects() != null) {
+            for (Subject s : t.getPossibleSubjects()) {
+                try { currentIds.add(s.getId()); } catch (Throwable ignore) { /* fallback below */ }
+            }
+        }
+        java.util.List<Integer> indices = new java.util.ArrayList<>();
+        for (int i = 0; i < all.size(); i++) {
+            Subject s = all.get(i);
+            boolean match = false;
+            // Prefer ID match when possible
+            try { match = currentIds.contains(s.getId()); } catch (Throwable ignore) {}
+            // Fallback: object identity (if same instances are reused)
+            if (!match && t.getPossibleSubjects() != null) {
+                for (Subject ps : t.getPossibleSubjects()) {
+                    if (ps == s) { match = true; break; }
                 }
             }
-        });
-
-        // Actions
-        btnNuevo.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                addNewTeacher();
-            }
-        });
-
-        btnGuardar.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                saveEditsToSelectedTeacher();
-            }
-        });
-
-        btnEliminar.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                deleteSelectedTeacher();
-            }
-        });
-
-        // Initial state
-        if (model.getRowCount() > 0) {
-            table.setRowSelectionInterval(0, 0);
-            loadSelectedTeacherIntoForm();
-        } else {
-            clearForm();
+            if (match) indices.add(i);
         }
+        int[] selIdx = indices.stream().mapToInt(Integer::intValue).toArray();
+        list.setSelectedIndices(selIdx);
+
+        int res = JOptionPane.showConfirmDialog(this, new JScrollPane(list),
+                "Asignaturas que puede impartir", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (res != JOptionPane.OK_OPTION) return;
+
+        List<Subject> selected = list.getSelectedValuesList();
+        t.setPossibleSubjects(selected);
+
+        controller.updateTeacher(t);
+        // Refresh the row so the "Posibles" count updates immediately
+        model.fireTableRowsUpdated(row, row);
     }
 
-    private JPanel buildTopBar() {
-        JPanel top = new JPanel(new BorderLayout(8, 8));
-        JTextField filter = new JTextField();
-        filter.setToolTipText("Filtrar por nombre, email o departamento");
-
-        filter.addActionListener(e -> applyFilter(filter.getText()));
-        filter.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { applyFilter(filter.getText()); }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { applyFilter(filter.getText()); }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { applyFilter(filter.getText()); }
-        });
-
-        top.add(new JLabel("Buscar:"), BorderLayout.WEST);
-        top.add(filter, BorderLayout.CENTER);
-        return top;
-    }
-
-    private void applyFilter(String text) {
-        if (text == null || text.isBlank()) {
-            sorter.setRowFilter(null);
-            return;
-        }
-        sorter.setRowFilter(RowFilter.regexFilter("(?i)" + Pattern.quote(text)));
-    }
-
-    private JPanel buildFormPanel() {
-        JPanel form = new JPanel();
-        form.setLayout(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(4, 4, 4, 4);
-        gbc.anchor = GridBagConstraints.WEST;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-
-        int row = 0;
-
-        // ID (read-only)
-        addField(form, gbc, row++, "ID:", txtId, true);
-
-        addField(form, gbc, row++, "Nombre:", txtNombre, false);
-        addField(form, gbc, row++, "Email:", txtEmail, false);
-        addField(form, gbc, row++, "Teléfono:", txtTelefono, false);
-        addField(form, gbc, row++, "Departamento:", txtDepartamento, false);
-        addField(form, gbc, row++, "Horas asignadas:", spHoras, false);
-        addField(form, gbc, row++, "Condiciones logradas:", txtAchieved, true);
-        addField(form, gbc, row++, "Condiciones ponderadas:", txtWeighted, true);
-
-        // Buttons
-        gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 1; gbc.weightx = 0;
-        form.add(btnNuevo, gbc);
-
-        gbc.gridx = 1; gbc.gridy = row; gbc.gridwidth = 1; gbc.weightx = 0.5;
-        form.add(btnGuardar, gbc);
-
-        gbc.gridx = 2; gbc.gridy = row; gbc.gridwidth = 1; gbc.weightx = 0.5;
-        form.add(btnEliminar, gbc);
-
-        // Give the form a fixed width so it looks like a side panel
-        form.setPreferredSize(new Dimension(420, 0));
-        return form;
-    }
-
-    private void addField(JPanel form, GridBagConstraints gbc, int row, String label, JComponent comp, boolean readOnly) {
-        gbc.gridx = 0; gbc.gridy = row; gbc.weightx = 0; gbc.gridwidth = 1;
-        form.add(new JLabel(label), gbc);
-        gbc.gridx = 1; gbc.gridy = row; gbc.weightx = 1; gbc.gridwidth = 2;
-        if (comp instanceof JTextField tf) {
-            tf.setEditable(!readOnly);
-        }
-        form.add(comp, gbc);
-    }
-
-    private void clearForm() {
-        txtId.setText("");
-        txtNombre.setText("");
-        txtEmail.setText("");
-        txtTelefono.setText("");
-        txtDepartamento.setText("");
-        spHoras.setValue(0);
-        txtAchieved.setText("");
-        txtWeighted.setText("");
-    }
-
-    private void loadSelectedTeacherIntoForm() {
-        int viewRow = table.getSelectedRow();
-        if (viewRow < 0) {
-            clearForm();
-            return;
-        }
-        int modelRow = table.convertRowIndexToModel(viewRow);
-        Teacher t = model.getAt(modelRow);
-
-        txtId.setText(safe(t.getId()));
-        txtNombre.setText(safe(t.getName()));
-        txtEmail.setText(safe(t.getEmail()));
-        txtTelefono.setText(safe(t.getPhone()));
-        txtDepartamento.setText(safe(t.getDepartment()));
+    private void loadSelected() {
+        int row = table.getSelectedRow();
+        if (row < 0) return;
+        Teacher t = model.getAt(row);
+        tfNombre.setText(t.getName());
+        tfAbrev.setText(t.getAbbreviation());
+        tfEmail.setText(t.getEmail());
+        tfPhone.setText(t.getPhone());
+        tfDepto.setText(t.getDepartment());
         spHoras.setValue(t.getHoursWork());
-        // Non-editable, computed from the selected schedule elsewhere in the app
-        txtAchieved.setText(String.valueOf(t.getAchievedConditions()));
-        txtWeighted.setText(String.valueOf(t.getWeightedConditions()));
-
+        lblCondLogr.setText(String.valueOf(t.getAchievedConditions()));
+        lblCondPond.setText(String.valueOf(t.getWeightedConditions()));
     }
 
-    private void addNewTeacher() {
-        String nombre = JOptionPane.showInputDialog(this, "Nombre del profesor:", "Nuevo profesor", JOptionPane.PLAIN_MESSAGE);
-        if (nombre == null || nombre.isBlank()) return;
-
-        Teacher t = new Teacher(UUID.randomUUID().toString(), nombre.trim(), nombre.trim().substring(0, 2));
-        t.setEmail("");
-        t.setPhone("");
-        t.setDepartment("");
-        t.setHoursWork(0);
-
-        presentationController.addNewTeacher(t);
-        model.reload(presentationController.getTeachers());
-
-        // Inform Calendar to refresh the 'Profesores' dropdown
-        presentationController.refreshTeachersUI();
-
-        int last = model.getRowCount() - 1;
-        if (last >= 0) {
-            table.setRowSelectionInterval(last, last);
-            loadSelectedTeacherIntoForm();
-        }
-    }
-
-    private void saveEditsToSelectedTeacher() {
-        int viewRow = table.getSelectedRow();
-        if (viewRow < 0) {
-            JOptionPane.showMessageDialog(this, "Selecciona un profesor primero.", "Sin selección", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        int modelRow = table.convertRowIndexToModel(viewRow);
-        Teacher t = model.getAt(modelRow);
-
-        // Apply edits
-        t.setName(txtNombre.getText().trim());
-        t.setEmail(txtEmail.getText().trim());
-        t.setPhone(txtTelefono.getText().trim());
-        t.setDepartment(txtDepartamento.getText().trim());
+    private void saveSelected() {
+        int row = table.getSelectedRow();
+        if (row < 0) return;
+        Teacher t = model.getAt(row);
+        t.setName(tfNombre.getText());
+        t.setAbbreviation(tfAbrev.getText());
+        t.setEmail(tfEmail.getText());
+        t.setPhone(tfPhone.getText());
+        t.setDepartment(tfDepto.getText());
         t.setHoursWork((Integer) spHoras.getValue());
 
-        // If you add a `updateTeacher(Teacher t)` to PresentationController/BusinessController, call it here.
-        // presentationController.updateTeacher(t);
-
-        model.fireTableRowsUpdated(modelRow, modelRow);
-
-        // Names may have changed -> refresh Calendar combos
-        presentationController.refreshTeachersUI();
+        controller.updateTeacher(t);
+        model.fireTableRowsUpdated(row, row);
     }
 
-    private void deleteSelectedTeacher() {
-        int viewRow = table.getSelectedRow();
-        if (viewRow < 0) {
-            JOptionPane.showMessageDialog(this, "Selecciona un profesor primero.", "Sin selección", JOptionPane.WARNING_MESSAGE);
-            return;
+    private void newTeacher() {
+        Teacher t = new Teacher(UUID.randomUUID().toString(), "Nuevo", "N");
+        controller.addTeacher(t);
+        model.reload(controller.getTeachers());
+    }
+
+    private void deleteSelected() {
+        int row = table.getSelectedRow();
+        if (row < 0) return;
+        Teacher t = model.getAt(row);
+        controller.removeTeacher(t.getId());
+        model.reload(controller.getTeachers());
+    }
+
+    // ====== Editors for complex lists ======
+    private void editPeriodos() {
+        int row = table.getSelectedRow();
+        if (row < 0) return;
+        Teacher t = model.getAt(row);
+
+        List<TimePeriod> all = controller.getTimePeriods();
+        JList<TimePeriod> list = new JList<>(new Vector<>(all));
+        list.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value,
+                                                          int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof TimePeriod tp) {
+                    setText(tpLabel(tp));
+                }
+                return this;
+            }
+        });
+        list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+
+        int opt = JOptionPane.showOptionDialog(this, new JScrollPane(list),
+                "Seleccione períodos", JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE, null,
+                new String[]{"Preferidos", "No preferidos", "No disponibles", "Cancelar"}, "Cancelar");
+
+        if (opt == 3 || opt == JOptionPane.CLOSED_OPTION) return;
+
+        List<TimePeriod> selected = list.getSelectedValuesList();
+        if (selected.isEmpty()) return;
+
+        if (opt == 0) { // preferidos
+            int weight = askWeight();
+            t.setPreferredTimePeriods(selected, weight);
+        } else if (opt == 1) { // no preferidos
+            int weight = askWeight();
+            t.setUnPreferredTimePeriods(selected, weight);
+        } else if (opt == 2) { // no disponibles
+            t.setUnavailableTimePeriods(selected);
         }
-        int modelRow = table.convertRowIndexToModel(viewRow);
-        Teacher t = model.getAt(modelRow);
 
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "¿Eliminar al profesor \"" + t.getName() + "\"?",
-                "Confirmar eliminación", JOptionPane.YES_NO_OPTION);
-        if (confirm != JOptionPane.YES_OPTION) return;
-
-        presentationController.removeTeacher(t.getId());
-        model.reload(presentationController.getTeachers());
-        clearForm();
-
-        // Inform Calendar to rebuild the 'Profesores' combo
-        presentationController.refreshTeachersUI();
+        controller.updateTeacher(t);
+        loadSelected();
     }
 
-    private static String safe(String s) {
-        return s == null ? "" : s;
+    private void editAsignaturas() {
+        int row = table.getSelectedRow();
+        if (row < 0) return;
+        Teacher t = model.getAt(row);
+
+        List<Subject> all = controller.getSubjects();
+        JList<Subject> list = new JList<>(new Vector<>(all));
+        list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+
+        // Show nice labels for subjects
+        list.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value,
+                                                          int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof Subject s) setText(subjectLabel(s));
+                return this;
+            }
+        });
+
+        int res = JOptionPane.showConfirmDialog(this, new JScrollPane(list),
+                "Seleccione asignaturas preferidas", JOptionPane.OK_CANCEL_OPTION);
+        if (res != JOptionPane.OK_OPTION) return;
+
+        List<Subject> selected = list.getSelectedValuesList();
+        int weight = askWeight();
+        t.setPreferredSubjects(selected, weight);
+
+        controller.updateTeacher(t);
+        loadSelected();
     }
 
-    // -------------------- Table model --------------------
-    private static class TeacherTableModel extends AbstractTableModel {
-        private final String[] columns = {"ID", "Nombre", "Email", "Teléfono", "Departamento", "Horas"};
+    private void editGrupos() {
+        int row = table.getSelectedRow();
+        if (row < 0) return;
+        Teacher t = model.getAt(row);
+
+        List<StudentGroup> all = controller.getStudentGroups();
+        JList<StudentGroup> list = new JList<>(new Vector<>(all));
+        list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+
+        // Show nice labels for groups
+        list.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value,
+                                                          int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof StudentGroup g) setText(groupLabel(g));
+                return this;
+            }
+        });
+
+        int opt = JOptionPane.showOptionDialog(this, new JScrollPane(list),
+                "Seleccione grupos", JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE, null,
+                new String[]{"Preferidos", "No preferidos", "Cancelar"}, "Cancelar");
+
+        if (opt == 2 || opt == JOptionPane.CLOSED_OPTION) return;
+
+        List<StudentGroup> selected = list.getSelectedValuesList();
+        if (selected.isEmpty()) return;
+
+        int weight = askWeight();
+        if (opt == 0) {
+            t.setPreferredStudentGroups(selected, weight);
+        } else if (opt == 1) {
+            t.setUnPreferredStudentGroups(selected, weight);
+        }
+
+        controller.updateTeacher(t);
+        loadSelected();
+    }
+
+    private int askWeight() {
+        String s = JOptionPane.showInputDialog(this, "Peso (entero):", "1");
+        try {
+            return Integer.parseInt(s);
+        } catch (Exception e) {
+            return 1;
+        }
+    }
+
+    static class TeacherTableModel extends AbstractTableModel {
         private List<Teacher> data;
+        // NEW column "Posibles" at the end
+        private final String[] cols = {"Nombre", "Abrev", "Email", "Teléfono", "Depto", "Horas", "CondLogr", "CondPond", "Posibles"};
 
-        public TeacherTableModel(List<Teacher> initial) {
-            this.data = initial;
+        public TeacherTableModel(List<Teacher> teachers) {
+            this.data = teachers;
         }
 
-        public void reload(List<Teacher> newData) {
-            this.data = newData;
+        public Teacher getAt(int r) { return data.get(r); }
+
+        public void reload(List<Teacher> teachers) {
+            this.data = teachers;
             fireTableDataChanged();
         }
 
-        public Teacher getAt(int row) {
-            return data.get(row);
+        @Override public int getRowCount() { return data.size(); }
+        @Override public int getColumnCount() { return cols.length; }
+        @Override public String getColumnName(int c) { return cols[c]; }
+
+        // Helper so the outer class can find a column by name
+        public int columnIndex(String name) {
+            for (int i = 0; i < cols.length; i++) if (cols[i].equals(name)) return i;
+            return -1;
         }
 
         @Override
-        public int getRowCount() {
-            return data == null ? 0 : data.size();
-        }
-
-        @Override
-        public int getColumnCount() {
-            return columns.length;
-        }
-
-        @Override
-        public String getColumnName(int column) {
-            return columns[column];
-        }
-
-        @Override
-        public Class<?> getColumnClass(int columnIndex) {
-            return switch (columnIndex) {
-                case 5 -> Integer.class; // Horas
-                default -> String.class;
-            };
-        }
-
-        @Override
-        public boolean isCellEditable(int rowIndex, int columnIndex) {
-            // We edit in the side form, not in the table
-            return false;
-        }
-
-        @Override
-        public Object getValueAt(int rowIndex, int columnIndex) {
-            Teacher t = data.get(rowIndex);
-            return switch (columnIndex) {
-                case 0 -> t.getId();
-                case 1 -> t.getName();
+        public Object getValueAt(int r, int c) {
+            Teacher t = data.get(r);
+            return switch (c) {
+                case 0 -> t.getName();
+                case 1 -> t.getAbbreviation();
                 case 2 -> t.getEmail();
                 case 3 -> t.getPhone();
                 case 4 -> t.getDepartment();
                 case 5 -> t.getHoursWork();
+                case 6 -> t.getAchievedConditions();
+                case 7 -> t.getWeightedConditions();
+                case 8 -> (t.getPossibleSubjects() == null ? 0 : t.getPossibleSubjects().size()); // NEW
                 default -> "";
             };
         }
     }
 
+    // Prefer TimePeriod.getName(); fallback to weekday + hours
+    private String tpLabel(TimePeriod tp) {
+        try {
+            String n = tp.getName();
+            if (n != null && !n.isBlank()) return n;
+        } catch (Throwable ignore) {}
+        try {
+            return tp.getWeekday() + " " + tp.getInitialHour() + "-" + tp.getFinalHour();
+        } catch (Throwable ignore) {}
+        return String.valueOf(tp);
+    }
 
-    /** Call this when the selected schedule changes to refresh the metrics. */
-    public void onScheduleChanged() {
-        // Just reload the current selection to pull latest achieved/weighted from Teacher
-        loadSelectedTeacherIntoForm();
+    private String subjectLabel(Subject s) {
+        if (s == null) return "";
+        if (s.getName() != null && !s.getName().isBlank()) return s.getName();
+        if (s.getAbbreviation() != null && !s.getAbbreviation().isBlank()) return s.getAbbreviation();
+        return String.valueOf(s);
+    }
+
+    private String groupLabel(StudentGroup g) {
+        if (g == null) return "";
+        if (g.getName() != null && !g.getName().isBlank()) return g.getName();
+        if (g.getAbbreviation() != null && !g.getAbbreviation().isBlank()) return g.getAbbreviation();
+        return String.valueOf(g);
+    }
+
+    // Tooltip helper for Posibles
+    private String subjectsTooltip(List<Subject> subs) {
+        if (subs == null || subs.isEmpty()) return "(ninguna)";
+        StringBuilder sb = new StringBuilder();
+        for (Subject s : subs) {
+            sb.append(subjectLabel(s)).append(", ");
+        }
+        // drop trailing comma
+        return sb.substring(0, sb.length() - 2);
     }
 }

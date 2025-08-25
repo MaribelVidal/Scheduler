@@ -13,9 +13,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import java.awt.*;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.List;
 
 public class Calendar extends JFrame {
@@ -42,10 +40,13 @@ public class Calendar extends JFrame {
     private final DefaultListModel<String> asignaturasModel = new DefaultListModel<>();
     private final DefaultListModel<String> periodosModel = new DefaultListModel<>();
 
+    private JComboBox<ComboItem> scheduleCombo;
+
     private String typeEntity;  // "Profesor" | "Clase" | "Grupo de Alumnos"
     private String nameEntity;  // nombre seleccionado (para mostrar)
     private String idEntity;    // id seleccionado (aquí usamos el mismo valor que nombre, ajusta si tienes un map nombre->id)
-    private int idSchedule = 0; // ajusta si necesitas otro id
+    private String idSchedule; // ajusta si necesitas otro id
+    private List<String> scheduleIds; // ids de horarios, si necesitas mantenerlos
 
     private boolean isRefreshing = false; // para evitar bucles infinitos al refrescar
 
@@ -54,10 +55,15 @@ public class Calendar extends JFrame {
     public Calendar(PresentationController presentationController) {
         super("Calendario Semanal");
         this.presentationControler = presentationController;
+        this.scheduleIds = new ArrayList<>();
     }
 
-    public void init(List<String> teachersNames, List<String> classroomsNames, List<String> studentsGroupsNames, List<String> tpNames, List<String> subjectsNames) {
+    public void init(List<String> teachersNames, List<String> classroomsNames,
+                     List<String> studentsGroupsNames, List<String> tpNames, List<String> subjectsNames) {
         this.lastTpNames = tpNames;
+        this.scheduleIds = presentationControler.getScheduleIds();
+        this.idSchedule = (scheduleIds == null || scheduleIds.isEmpty()) ? null : scheduleIds.get(0); // primer id por defecto
+
         initData(teachersNames, classroomsNames, studentsGroupsNames, subjectsNames);
         initUI(tpNames);
         setVisible(true);
@@ -85,10 +91,10 @@ public class Calendar extends JFrame {
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("Horario", createCalendarPanel(tpNames));
         tabs.addTab("Profesores", new ProfesoresPanel(presentationControler));
-        tabs.addTab("Clases", createManagementPanel("Clases", clasesModel));
-        tabs.addTab("Grupos", createManagementPanel("Grupos", alumnosModel));
-        tabs.addTab("Asignaturas", createManagementPanel("Asignaturas", asignaturasModel));
-        tabs.addTab("Periodos", createManagementPanel("Periodos", periodosModel));
+        tabs.addTab("Clases", new ClassroomsPanel(presentationControler));
+        tabs.addTab("Grupos", new StudentGroupsPanel(presentationControler));
+        tabs.addTab("Asignaturas", new SubjectsPanel(presentationControler));
+        tabs.addTab("Periodos", new TimePeriodsPanel(presentationControler));
 
         add(tabs);
 
@@ -115,12 +121,58 @@ public class Calendar extends JFrame {
 
         JPanel selectors = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
         selectors.add(new JLabel("Categoría:"));
-        categoryCombo = new JComboBox<>(dataMap.keySet().toArray(new String[0]));
+        categoryCombo = new JComboBox<>(new String[] {"Profesores", "Aulas", "Grupos de Alumnos"});
         selectors.add(categoryCombo);
 
         selectors.add(new JLabel("Nombre:"));
         nameCombo = new JComboBox<>();
         selectors.add(nameCombo);
+
+        // === selector de Horario (Schedule) ===
+        selectors.add(new JLabel("Horario:"));
+        scheduleCombo = new JComboBox<>(); // JComboBox<ComboItem>
+        scheduleCombo.setPrototypeDisplayValue(new ComboItem("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+                "Horario xxxxxxxx")); // ancho cómodo
+        selectors.add(scheduleCombo);
+
+        // Botón Renombrar
+        JButton renameBtn = new JButton("Renombrar...");
+        renameBtn.addActionListener(e -> {
+            ComboItem sel = (ComboItem) scheduleCombo.getSelectedItem();
+            if (sel == null) return;
+            String current = sel.label;
+            String name = JOptionPane.showInputDialog(this, "Nuevo nombre del horario:", current);
+            if (name == null) return;
+            name = name.trim();
+            if (name.isBlank()) return;
+            presentationControler.renameSchedule(sel.id, name);
+            reloadScheduleCombo();                         // recargar nombres
+            ensureValidEntitySelection();
+            // Mantener el mismo id seleccionado
+            for (int i = 0; i < scheduleCombo.getItemCount(); i++) {
+                ComboItem it = scheduleCombo.getItemAt(i);
+                if (it.id.equals(sel.id)) { scheduleCombo.setSelectedIndex(i); break; }
+            }
+            refreshCalendarTable(lastTpNames);
+        });
+        selectors.add(renameBtn);
+
+        // Botón Regenerar
+        JButton regenerateBtn = new JButton("Regenerar horarios");
+        regenerateBtn.addActionListener(e -> {
+            int ok = JOptionPane.showConfirmDialog(this,
+                    "¿Regenerar los horarios con la información actual?\n" +
+                            "Esto reemplazará las soluciones previas.",
+                    "Confirmar", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (ok != JOptionPane.OK_OPTION) return;
+
+            presentationControler.regenerateSchedules();
+            reloadScheduleCombo();                         // ids/nombres pueden cambiar
+            ensureValidEntitySelection();
+            refreshCalendarTable(lastTpNames);
+        });
+        selectors.add(regenerateBtn);
+
         north.add(selectors, BorderLayout.NORTH);
 
         calendarTitle = new JLabel("", SwingConstants.CENTER);
@@ -170,6 +222,20 @@ public class Calendar extends JFrame {
             }
         });
 
+        // Cambio de horario → refrescar tabla
+        scheduleCombo.addActionListener(e -> {
+            if (isRefreshing) return;
+            isRefreshing = true;
+            try {
+                ComboItem sel = (ComboItem) scheduleCombo.getSelectedItem();
+                idSchedule = (sel == null) ? null : sel.id;
+                ensureValidEntitySelection();
+                refreshCalendarTable(lastTpNames);
+            } finally {
+                isRefreshing = false;
+            }
+        });
+
         // Inicialización por defecto
         // Selecciona la primera categoría y nombres
         if (!dataMap.isEmpty()) {
@@ -187,12 +253,58 @@ public class Calendar extends JFrame {
             calendarTitle.setText(nameEntity == null ? "Horario" : ("Horario de " + nameEntity));
         }
 
+        // Cargar IDs/nombres de horarios al final
+        reloadScheduleCombo();
+        ensureValidEntitySelection();
+
         return north;
     }
+
+
+    /** Recarga el combo de IDs de horario desde PresentationController y mantiene selección si es posible. */
+    /** Recarga el combo de IDs de horario mostrando nombre si existe. */
+    private void reloadScheduleCombo() {
+        java.util.List<business.Schedule> all = presentationControler.getAllSchedules(); // add this in PresentationController
+        DefaultComboBoxModel<ComboItem> m = new DefaultComboBoxModel<>();
+        if (all != null) {
+            for (business.Schedule s : all) {
+                m.addElement(new ComboItem(s.getId(), scheduleLabel(s)));
+            }
+        }
+        scheduleCombo.setModel(m);
+
+        // Mantener selección previa si es posible
+        if (idSchedule != null) {
+            for (int i = 0; i < m.getSize(); i++) {
+                if (idSchedule.equals(m.getElementAt(i).id)) {
+                    scheduleCombo.setSelectedIndex(i);
+                    return;
+                }
+            }
+        }
+        if (m.getSize() > 0) {
+            scheduleCombo.setSelectedIndex(0);
+            idSchedule = m.getElementAt(0).id;
+        } else {
+            idSchedule = null;
+        }
+        scheduleCombo.setEnabled(m.getSize() > 0);
+    }
+
+    private String scheduleLabel(business.Schedule s) {
+        String n = s.getName();
+        if (n != null && !n.isBlank()) return n;
+        // Fallback: etiqueta corta con ID
+        String shortId = s.getId() != null && s.getId().length() >= 8 ? s.getId().substring(0, 8) : String.valueOf(s.getId());
+        return "Horario " + shortId;
+    }
+
+
 
     /** Construye el panel central con la JTable del horario */
     private JScrollPane createCenterPanel(List<String> tpNames) {
         String[] columnNames = {"", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes"};
+        ensureValidEntitySelection();
 
         // If there’s no valid selection yet, show an empty table with whatever rows we got (maybe zero).
         if (typeEntity == null || idEntity == null || idEntity.isEmpty()) {
@@ -540,6 +652,13 @@ public class Calendar extends JFrame {
         // Reconstruir el combo de entidades según la categoría
         updateNames();
 
+        // Mantener/actualizar lista de IDs de horario (por si cambian entre soluciones)
+        if (scheduleCombo != null) {
+            reloadScheduleCombo();
+            ensureValidEntitySelection();
+        }
+
+
         // Intentar restaurar la selección anterior (si el id sigue en la lista)
         if (prevId != null) {
             ComboBoxModel<ComboItem> model = nameCombo.getModel();
@@ -559,4 +678,46 @@ public class Calendar extends JFrame {
         // Volver a crear la tabla con los mismos tramos horarios (si aplica)
         refreshCalendarTable(lastTpNames);
     }
+
+    /** Does the currently selected idEntity exist in the current category? */
+    private boolean isCurrentEntityValid() {
+        if (idEntity == null || typeEntity == null) return false;
+        try {
+            switch (typeEntity) {
+                case "Profesor":
+                    for (var t : presentationControler.getTeachers()) if (idEntity.equals(t.getId())) return true;
+                    return false;
+                case "Clase":
+                    for (var c : presentationControler.getClassrooms()) if (idEntity.equals(c.getId())) return true;
+                    return false;
+                case "Grupo de Alumnos":
+                    for (var g : presentationControler.getStudentGroups()) if (idEntity.equals(g.getId())) return true;
+                    return false;
+                default:
+                    return false;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Ensure we have a valid selection in nameCombo; if not, pick the first one (or clear). */
+    private void ensureValidEntitySelection() {
+        if (isCurrentEntityValid()) return;
+
+        // rebuild names list for current category
+        updateNames();
+        ComboItem ci = (ComboItem) nameCombo.getSelectedItem();
+        if (ci != null) {
+            idEntity = ci.id;
+            nameEntity = ci.label;
+            calendarTitle.setText("Horario de " + nameEntity);
+        } else {
+            idEntity = null;
+            nameEntity = null;
+            calendarTitle.setText("Horario");
+        }
+    }
+
+
 }

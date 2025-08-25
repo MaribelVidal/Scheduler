@@ -7,8 +7,7 @@ public class ScheduledUnit {
 
     public ScheduledUnit(StudentGroup studentGroup, Subject subject, int uniqueId) {
         this.studentGroup = studentGroup;
-        this.subject = subject;
-        this.uniqueId = uniqueId;
+        this.subject = subject;        this.uniqueId = uniqueId;
     }
 
     public StudentGroup getStudentGroup() {

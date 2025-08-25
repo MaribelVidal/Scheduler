@@ -6,6 +6,7 @@ import java.util.List;
 public class TimePeriod {
 
     private String id;
+    private String name;
     private String weekday;
     private LocalTime initialHour;
     private LocalTime finalHour;
@@ -22,6 +23,8 @@ public class TimePeriod {
         this.finalHour = finalHour;
 
     }
+
+
 
     public String getId() {
         return id;

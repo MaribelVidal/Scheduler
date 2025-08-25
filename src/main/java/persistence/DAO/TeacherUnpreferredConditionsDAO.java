@@ -22,7 +22,7 @@ public class TeacherUnpreferredConditionsDAO {
     }
 
 
-    public void assignUnpreferredConditions(String teacherId, String conditionId) throws SQLException {
+    public void addUnpreferredConditions(String teacherId, String conditionId) throws SQLException {
         String query = "INSERT INTO teacherUnpreferredConditions (teacherId, conditionId) VALUES (?, ?)";
         try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1,teacherId);
@@ -31,6 +31,17 @@ public class TeacherUnpreferredConditionsDAO {
             preparedStatement.executeUpdate();
         }
 
+    }
+
+
+
+    public void updateUnpreferredConditions(String teacherId, String conditionId) throws SQLException {
+        String query = "UPDATE teacherUnpreferredConditions SET conditionId = ? WHERE teacherId = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, conditionId);
+            preparedStatement.setString(2, teacherId);
+            preparedStatement.executeUpdate();
+        }
     }
 
     public List<Condition> getAllUnpreferredConditions(String teacherId) throws Exception {
@@ -57,6 +68,14 @@ public class TeacherUnpreferredConditionsDAO {
         try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1, teacherId );
             preparedStatement.setString(2, conditionId );
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    public void deleteTeacher (String teacherId) throws SQLException {
+        String query = "DELETE FROM teacherUnpreferredConditions WHERE teacherId = ?";
+        try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, teacherId);
             preparedStatement.executeUpdate();
         }
     }

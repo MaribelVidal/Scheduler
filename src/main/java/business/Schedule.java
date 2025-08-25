@@ -3,7 +3,8 @@ package business;
 import java.util.*;
 
 public class Schedule {
-    private String id; // Unique identifier for the schedule
+    private String id;
+    private String name;
     private List<String> assignments; // Example: storing assignments as strings
     private int achievedConditions; // número de condiciones cumplidas
     private int weightedConditions;// condiciones ponderadas cumplidas
@@ -11,23 +12,15 @@ public class Schedule {
     private List<Lesson> lessons; // Lista de lecciones asignadas
 
     public Schedule() {
-        this.id = UUID.randomUUID().toString(); // Generate a unique ID for the schedule
         this.assignments = new ArrayList<>();
         this.achievedConditions = 0; //
         this.weightedConditions = 0;
         this.lessons= new ArrayList<>();//
+        this.name = "Horario Generado"; // Default name
     }
 
     public int getAchievedConditions() {
         return achievedConditions;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
     }
 
     public void setAchievedConditions(int achievedConditions) {
@@ -140,7 +133,23 @@ public class Schedule {
         return null;
     }
 
+     public void setLessons(List<Lesson> lessons) {
+        this.lessons = lessons;
+    }
 
+    public String getId() {
+        return id;
+    }
 
+    public void setId(String scheduleId) {
+        this.id = scheduleId;
+    }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
 }

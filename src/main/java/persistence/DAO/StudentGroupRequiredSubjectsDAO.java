@@ -21,7 +21,7 @@ public class StudentGroupRequiredSubjectsDAO {
     }
 
 
-    public void studentGroupRequiredSubjects(String studentGroupId, String subjectId) throws SQLException {
+    public void addRequiredSubjects(String studentGroupId, String subjectId) throws SQLException {
         String query = "INSERT INTO studentGroupRequiredSubjects (studentGroupId, subjectId) VALUES (?, ?)";
         try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1,studentGroupId);
@@ -30,6 +30,15 @@ public class StudentGroupRequiredSubjectsDAO {
             preparedStatement.executeUpdate();
         }
 
+    }
+
+    public void updateRequiredSubjects(String studentGroupId, String subjectId) throws SQLException {
+        String query = "UPDATE studentGroupRequiredSubjects SET subjectId = ? WHERE studentGroupId = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, subjectId);
+            preparedStatement.setString(2, studentGroupId);
+            preparedStatement.executeUpdate();
+        }
     }
 
     public List<Subject> getAllRequiredSubjects(String studentGroupId) throws SQLException{
@@ -57,7 +66,7 @@ public class StudentGroupRequiredSubjectsDAO {
 
 
 
-    public void deleteRequiredSubject (String studentGroupId, String subjectId) throws SQLException{
+    public void deleteRequiredSubjects (String studentGroupId, String subjectId) throws SQLException{
         String query = "DELETE FROM studentGroupRequiredSubjects WHERE studentGroupId = ? AND subjectId = ?";
         try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1, studentGroupId );
@@ -65,6 +74,14 @@ public class StudentGroupRequiredSubjectsDAO {
             preparedStatement.executeUpdate();
         }
 
+    }
+
+    public void deleteStudentGroup (String studentGroupId) throws SQLException {
+        String query = "DELETE FROM studentGroupRequiredSubjects WHERE studentGroupId = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, studentGroupId);
+            preparedStatement.executeUpdate();
+        }
     }
 
 

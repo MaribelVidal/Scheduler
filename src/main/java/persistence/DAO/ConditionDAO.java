@@ -8,15 +8,11 @@ import java.util.List;
 import java.util.Objects;
 
 public class ConditionDAO implements DAO<Condition>{
-
     private Connection connection;
 
 
     public ConditionDAO(Connection connection) {
-
         this.connection = connection;
-
-
     }
 
     @Override
@@ -30,6 +26,24 @@ public class ConditionDAO implements DAO<Condition>{
             preparedStatement.setString(5,condition.getTimePeriod().getId());
             preparedStatement.setString(6,condition.getStudentGroup().getId());
 
+
+            preparedStatement.executeUpdate();
+        }
+
+    }
+
+    @Override
+    public void update(Condition condition) throws SQLException {
+
+        String query = "UPDATE conditions SET  teacher = ?, weight = ?, subject = ?, timePeriod = ?, studentGroup = ? WHERE id = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            preparedStatement.setString(1, condition.getTeacher().getId());
+            preparedStatement.setInt(2, condition.getWeight());
+            preparedStatement.setString(3, condition.getSubject().getId());
+            preparedStatement.setString(4, condition.getTimePeriod().getId());
+            preparedStatement.setString(5, condition.getStudentGroup().getId());
+            preparedStatement.setString(6, condition.getId());
 
             preparedStatement.executeUpdate();
         }
@@ -83,48 +97,10 @@ public class ConditionDAO implements DAO<Condition>{
     }
 
     @Override
-    public void update(Condition condition) throws SQLException {
-
-        String query = "UPDATE conditions SET  teacher = ?, weight = ?, subject = ?, timePeriod = ?, studentGroup = ? WHERE id = ?";
-        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-
-            preparedStatement.setString(1, condition.getTeacher().getId());
-            preparedStatement.setInt(2, condition.getWeight());
-            preparedStatement.setString(3, condition.getSubject().getId());
-            preparedStatement.setString(4, condition.getTimePeriod().getId());
-            preparedStatement.setString(5, condition.getStudentGroup().getId());
-            preparedStatement.setString(6, condition.getId());
-
-            preparedStatement.executeUpdate();
-        }
-
-    }
-
-    @Override
-    public void delete (Condition condition) throws SQLException{
-
-            String query = "DELETE FROM conditions WHERE id = ? ";
-            try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-                preparedStatement.setString(1,condition.getId());
-
-                preparedStatement.executeUpdate();
-            }
-        }
-
-
-
-
-
-
-    @Override
     public Condition getOne(String id) throws SQLException {
         String query = "";
 
-            query = "SELECT * FROM conditions WHERE id = ? ";
-
-
-
-
+        query = "SELECT * FROM conditions WHERE id = ? ";
 
         try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
 
@@ -166,4 +142,16 @@ public class ConditionDAO implements DAO<Condition>{
             throw new RuntimeException(e);
         }
     }
+
+
+    @Override
+    public void delete (Condition condition) throws SQLException{
+            String query = "DELETE FROM conditions WHERE id = ? ";
+            try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+                preparedStatement.setString(1,condition.getId());
+
+                preparedStatement.executeUpdate();
+            }
+    }
+
 }

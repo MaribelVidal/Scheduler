@@ -5,7 +5,7 @@ import java.util.UUID;
 public class Condition {
 
     private String id;
-    private  String ConditionType;
+    private String conditionType;
     private Teacher teacher;
     private int weight;
 
@@ -24,7 +24,7 @@ public class Condition {
         this.subject = dummySubject;
         this.timePeriod = dummyTimePeriod;
         this.studentGroup = dummyStudentGroup;
-        this.ConditionType = "None";
+        this.conditionType = "None";
     }
 
     public Condition (Teacher teacher, int weight, Subject subject) {
@@ -34,7 +34,7 @@ public class Condition {
         this.subject = subject;
         this.timePeriod = dummyTimePeriod;
         this.studentGroup = dummyStudentGroup;
-        this.ConditionType = "Subject";
+        this.conditionType = "Subject";
     }
 
     public Condition (Teacher teacher, int weight, TimePeriod timePeriod) {
@@ -44,7 +44,7 @@ public class Condition {
         this.subject = dummySubject;
         this.timePeriod = timePeriod;
         this.studentGroup = dummyStudentGroup;
-        this.ConditionType = "TimePeriod";
+        this.conditionType = "TimePeriod";
 
     }
 
@@ -55,7 +55,7 @@ public class Condition {
         this.subject = dummySubject;
         this.timePeriod = dummyTimePeriod;
         this.studentGroup = studentGroup    ;
-        this.ConditionType = "StudentGroup";
+        this.conditionType = "StudentGroup";
     }
 
     public String getId() {
@@ -106,6 +106,6 @@ public class Condition {
     }
 
     public String getConditionType() {
-        return ConditionType;
+        return conditionType;
     }
 }

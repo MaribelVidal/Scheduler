@@ -10,6 +10,7 @@ import org.chocosolver.solver.variables.IntVar;
 
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 
 /**
@@ -558,146 +559,160 @@ public class ScheduleSolver {
     }
 
     private List<Schedule> solveModel() {
-        List<Schedule> schedules = new ArrayList<>();
-        Map<Teacher, Schedule> teacherSchedules = new HashMap<>();
-        Map<Classroom, Schedule> classroomSchedules = new HashMap<>();
-        Map<StudentGroup, Schedule> studentGroupSchedules = new HashMap<>();
+        // ==== TUNE THESE ====
+        final int MAX_SOLUTIONS   = 10;   // N best you want to return
+        final int POOL_LIMIT      = 100;  // how many unique candidates to keep before stopping
+        final int MAX_RESTARTS    = 5;    // how many random restarts
+        final int BEAM_TOLERANCE  = 100;  // allow exploring solutions within (bestScore - tolerance)
 
-        // 1. Find the optimal score
-        IntVar scoreVar = totalScore;
-        Solution optimalSolution = model.getSolver().findOptimalSolution(scoreVar, Model.MAXIMIZE);
+        // Collect candidates here (do NOT attach to entities yet)
+        class Candidate {
+            final int score;
+            final Schedule schedule; // global schedule
+            final Map<Teacher, Schedule> tMap;
+            final Map<Classroom, Schedule> cMap;
+            final Map<StudentGroup, Schedule> gMap;
+            final String signature;  // uniqueness signature (ignoring classrooms)
 
-        if (optimalSolution == null) {
-            System.out.println("No optimal solution found.");
-            return schedules;
+            Candidate(int score, Schedule schedule,
+                      Map<Teacher, Schedule> tMap,
+                      Map<Classroom, Schedule> cMap,
+                      Map<StudentGroup, Schedule> gMap,
+                      String signature) {
+                this.score = score;
+                this.schedule = schedule;
+                this.tMap = tMap;
+                this.cMap = cMap;
+                this.gMap = gMap;
+                this.signature = signature;
+            }
         }
 
+        List<Candidate> pool = new ArrayList<>();
+        Set<String> seen = new HashSet<>(); // for uniqueness (by signature)
+
+        // 1) Find best soft score once
+        IntVar scoreVar = totalScore;
+        Solution optimalSolution = model.getSolver().findOptimalSolution(scoreVar, Model.MAXIMIZE);
+        if (optimalSolution == null) {
+            System.out.println("No optimal solution found.");
+            return new ArrayList<>();
+        }
         int bestScore = optimalSolution.getIntVal(scoreVar);
         System.out.println("Best soft score found: " + bestScore);
 
-        // 2. Reset solver and add randomness for diversity
-        Solver solver = model.getSolver();
-        solver.reset();
-
+        // Prepare arrays for random search
         IntVar[] allVars = Stream.concat(
                 Stream.concat(Stream.of(unitTeacherVars), Stream.of(unitClassroomVars)),
                 Stream.of(unitTimePeriodVars)
         ).toArray(IntVar[]::new);
 
-        solver.setSearch(Search.randomSearch(allVars, System.currentTimeMillis()));
-
-        int maxSolutions = 10;
         int collected = 0;
 
-        while (solver.solve()) {
-            int currentScore = scoreVar.getValue();
-            if (currentScore < bestScore - maxSolutions) break;
+        // 2) Multi-restart randomized search to diversify
+        for (int restart = 0; restart < MAX_RESTARTS && pool.size() < POOL_LIMIT; restart++) {
+            Solver solver = model.getSolver();
+            solver.reset();
+            long seed = System.nanoTime() ^ ThreadLocalRandom.current().nextLong();
+            solver.setSearch(Search.randomSearch(allVars, seed));
 
-            //Crear un nuevo Schedule para cada profesor
-            teacherSchedules.clear(); // Limpiar horarios anteriores
+            while (solver.solve()) {
+                int currentScore = scoreVar.getValue();
+                // Prune far-below-best solutions to save time
+                if (currentScore < bestScore - BEAM_TOLERANCE) break;
 
-            // Inicializar un horario para cada profesor
-            for (Teacher teacher : teachers) {
-                teacherSchedules.put(teacher, new Schedule());
+                // Build per-entity schedules for this solution (local, not attached)
+                Map<Teacher, Schedule> teacherSchedules = new HashMap<>();
+                for (Teacher t : teachers) teacherSchedules.put(t, new Schedule());
+
+                Map<Classroom, Schedule> classroomSchedules = new HashMap<>();
+                for (Classroom c : classrooms) classroomSchedules.put(c, new Schedule());
+
+                Map<StudentGroup, Schedule> studentGroupSchedules = new HashMap<>();
+                for (StudentGroup g : studentGroups) studentGroupSchedules.put(g, new Schedule());
+
+                Schedule schedule = new Schedule();
+
+                for (int i = 0; i < numUnits; i++) {
+                    int teacherIdx    = unitTeacherVars[i].getValue();
+                    int classroomIdx  = unitClassroomVars[i].getValue();
+                    int timePeriodIdx = unitTimePeriodVars[i].getValue();
+
+                    Teacher teacher       = teachers.get(teacherIdx);
+                    Classroom classroom   = classrooms.get(classroomIdx);
+                    TimePeriod timePeriod = timePeriods.get(timePeriodIdx);
+                    ScheduledUnit unit    = scheduledUnits.get(i);
+
+                    // global schedule
+                    schedule.addAssignment(unit, teacher, classroom, timePeriod);
+
+                    // per-entity
+                    teacherSchedules.get(teacher).addAssignment(unit, teacher, classroom, timePeriod);
+                    classroomSchedules.get(classroom).addAssignment(unit, teacher, classroom, timePeriod);
+                    studentGroupSchedules.get(unit.getStudentGroup()).addAssignment(unit, teacher, classroom, timePeriod);
+                }
+
+                // Uniqueness signature that ignores classroom => increases diversity
+                String sig = buildSignatureIgnoringClassrooms();
+
+                if (seen.add(sig)) {
+                    pool.add(new Candidate(currentScore, schedule, teacherSchedules, classroomSchedules, studentGroupSchedules, sig));
+                    collected++;
+                    System.out.println("Collected candidate #" + collected + " with score " + currentScore);
+                    if (pool.size() >= POOL_LIMIT) break; // enough unique candidates
+                }
             }
-
-            // Crear un horario para cada aula
-            classroomSchedules.clear(); // Limpiar horarios anteriores
-            for (Classroom classroom : classrooms) {
-                classroomSchedules.put(classroom, new Schedule());
-            }
-
-            // Crear un horario para cada grupo de estudiantes
-            studentGroupSchedules.clear(); // Limpiar horarios anteriores
-            for (StudentGroup studentGroup : studentGroups) {
-                studentGroupSchedules.put(studentGroup, new Schedule());
-            }
-
-
-
-            // Construct the schedule
-            Schedule schedule = new Schedule();
-            for (int i = 0; i < numUnits; i++) {
-                int teacherIdx = unitTeacherVars[i].getValue();
-                int classroomIdx = unitClassroomVars[i].getValue();
-                int timePeriodIdx = unitTimePeriodVars[i].getValue();
-
-                Teacher teacher = teachers.get(teacherIdx);
-                Classroom classroom = classrooms.get(classroomIdx);
-                TimePeriod timePeriod = timePeriods.get(timePeriodIdx);
-                ScheduledUnit unit = scheduledUnits.get(i);
-
-                schedule.addAssignment(
-                        scheduledUnits.get(i),
-                        teachers.get(teacherIdx),
-                        classrooms.get(classroomIdx),
-                        timePeriods.get(timePeriodIdx)
-                );
-
-                // Añadir al horario individual del profesor
-                teacherSchedules.get(teacher).addAssignment(unit, teacher, classroom, timePeriod);
-
-                // Añadir al horario individual del aula
-                classroomSchedules.get(classroom).addAssignment(unit, teacher, classroom, timePeriod);
-
-                // Añadir al horario individual del grupo de estudiantes
-                studentGroupSchedules.get(unit.getStudentGroup()).addAssignment(unit, teacher, classroom, timePeriod);
-            }
-
-
-
-
-
-            schedules.add(schedule);
-
-            // Guardar los horarios individuales
-            for (Teacher teacher : teachers) {
-                Schedule teacherSchedule = teacherSchedules.get(teacher);
-                // Solo guardar si tiene asignaciones
-
-                    // Asignar el horario al profesor
-                    teacher.addSchedule(teacherSchedule);
-
-            }
-
-            for (Classroom classroom : classrooms) {
-                Schedule classroomSchedule = classroomSchedules.get(classroom);
-                // Solo guardar si tiene asignaciones
-
-                    // Asignar el horario al aula
-                    classroom.addSchedule(classroomSchedule);
-
-            }
-
-            for (StudentGroup studentGroup : studentGroups) {
-                Schedule studentGroupSchedule = studentGroupSchedules.get(studentGroup);
-                // Solo guardar si tiene asignaciones
-
-                    // Asignar el horario al grupo de estudiantes
-                    studentGroup.addSchedule(studentGroupSchedule);
-
-            }
-
-
-
-
-            System.out.println("Solution " + schedules.size() + ": soft score = " + currentScore);
-            collected++;
-            if (collected >= maxSolutions) break;
-
-
-            // Exclude this solution from future results
-            List<BoolVar> diffs = new ArrayList<>();
-            for (int i = 0; i < numUnits; i++) {
-                diffs.add(model.arithm(unitTeacherVars[i], "!=", unitTeacherVars[i].getValue()).reify());
-                diffs.add(model.arithm(unitClassroomVars[i], "!=", unitClassroomVars[i].getValue()).reify());
-                diffs.add(model.arithm(unitTimePeriodVars[i], "!=", unitTimePeriodVars[i].getValue()).reify());
-            }
-            model.or(diffs.toArray(new BoolVar[0])).post();
         }
 
-        return schedules;
+        // 3) Sort by soft score desc and pick the best N
+        pool.sort((a,b) -> Integer.compare(b.score, a.score));
+        List<Candidate> top = pool.size() > MAX_SOLUTIONS ? pool.subList(0, MAX_SOLUTIONS) : pool;
+
+        // 4) Now attach selected solutions to entities and return the schedules
+        List<Schedule> result = new ArrayList<>(top.size());
+
+        // Optional: clear existing schedules in entities before attaching (depends on your lifecycle)
+        //for (Teacher t : teachers) t.setSchedules(new ArrayList<>());
+        //for (Classroom c : classrooms) c.setSchedules(new ArrayList<>());
+        //for (StudentGroup g : studentGroups) g.setSchedules(new ArrayList<>());
+
+        for (Candidate cand : top) {
+            // Attach per-entity schedules
+            for (Map.Entry<Teacher, Schedule> e : cand.tMap.entrySet()) {
+                e.getKey().addSchedule(e.getValue());
+            }
+            for (Map.Entry<Classroom, Schedule> e : cand.cMap.entrySet()) {
+                e.getKey().addSchedule(e.getValue());
+            }
+            for (Map.Entry<StudentGroup, Schedule> e : cand.gMap.entrySet()) {
+                e.getKey().addSchedule(e.getValue());
+            }
+            result.add(cand.schedule);
+        }
+
+        // Debug
+        System.out.println("Selected " + result.size() + " best unique schedules by soft score.");
+        for (int i = 0; i < result.size(); i++) {
+            System.out.println("Solution " + (i+1) + " score=" + top.get(i).score);
+        }
+        return result;
     }
+
+    /** Build a uniqueness signature from the current solution that IGNORES classrooms,
+     *  so two solutions that only change a classroom are considered the same (encourages diversity).
+     */
+    private String buildSignatureIgnoringClassrooms() {
+        // unit-by-unit: teacherIdx + "@" + timeIdx
+        StringBuilder sb = new StringBuilder(numUnits * 6);
+        for (int i = 0; i < numUnits; i++) {
+            int teacherIdx    = unitTeacherVars[i].getValue();
+            int timePeriodIdx = unitTimePeriodVars[i].getValue();
+            if (i > 0) sb.append('|');
+            sb.append(teacherIdx).append('@').append(timePeriodIdx);
+        }
+        return sb.toString();
+    }
+
 
 
 

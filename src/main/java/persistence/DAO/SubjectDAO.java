@@ -16,6 +16,8 @@ public class SubjectDAO implements DAO<Subject> {
     public SubjectDAO(Connection connection) {
         this.connection = connection;
         this.classroomDAO = new ClassroomDAO(connection);
+        classroomDAO.setClassroomAssignedSchedulesDAO(new ClassroomAssignedSchedulesDAO(connection, new ScheduleDAO(connection)));
+        classroomDAO.setClassroomAssignedSubjectsDAO(new ClassroomAssignedSubjectsDAO(connection, this));
     }
 
     @Override

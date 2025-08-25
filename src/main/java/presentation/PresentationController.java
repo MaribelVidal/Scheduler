@@ -1,9 +1,6 @@
 package presentation;
 
-import business.BusinessController;
-import business.Schedule;
-import business.StudentGroup;
-import business.Teacher;
+import business.*;
 
 import java.util.List;
 
@@ -32,19 +29,19 @@ public class PresentationController {
         calendar.setVisible(true);
     }
 
-    public Schedule getTeacherSchedule(String teacherId, int Id) {
+    public Schedule getTeacherSchedule(String teacherId, String Id) {
         return businessController.getTeacherSchedule(teacherId, Id);
     }
-    public Schedule getClassroomSchedule(String classroomId, int Id) {
+    public Schedule getClassroomSchedule(String classroomId, String Id) {
         return businessController.getClassroomSchedule(classroomId, Id);
     }
-    public Schedule getStudentGroupSchedule(String studentGroupId, int Id) {
+    public Schedule getStudentGroupSchedule(String studentGroupId, String Id) {
         return businessController.getStudentGroupSchedule(studentGroupId, Id);
     }
 
     // PresentationController: expose name→id lists, or a list of entities
-    public List<business.Teacher> getTeachers() { return businessController.getTeachers(); }
-    public List<business.Classroom> getClassrooms() { return businessController.getClassrooms(); }
+    public List<Teacher> getTeachers() { return businessController.getTeachers(); }
+    public List<Classroom> getClassrooms() { return businessController.getClassrooms(); }
     public List<StudentGroup> getStudentGroups() { return businessController.getStudentGroups(); }
 
 
@@ -82,20 +79,71 @@ public class PresentationController {
     public void removeSubject (String subjectId) {
         businessController.removeSubject(subjectId);
     }
-
+    // Back-compat shim for older panels
     public void refreshTeachersUI() {
-        if (calendar != null) {
-            calendar.refreshEntities();
-        }
+        // If you added refreshAllUI() earlier, reuse it:
+        refreshAllUI();
+    }
+
+    public List<Subject> getSubjects() {
+        return businessController.getSubjects();
     }
 
 
-    public void updateTeacher(Teacher teacher) {
-        businessController.updateTeacher(teacher);
-        // If calendar open, refresh entities (e.g., name changed)
-        if (calendar != null) {
-            calendar.refreshEntities();
+
+    public void registerCalendar(presentation.Calendar calendar) {
+        this.calendar = calendar;
+    }
+
+    /** Notify the Calendar UI to refresh combos and table after data changes. */
+    public void refreshAllUI() {
+        if (this.calendar != null) {
+            this.calendar.refreshEntities();
         }
     }
 
+    public void updateClassroom(Classroom c) {
+        businessController.updateClassroom(c);
+    }
+
+    public void updateTeacher(Teacher t) {
+        businessController.updateTeacher(t);
+    }
+
+    public void updateStudentGroup(StudentGroup g) {
+        businessController.updateStudentGroup(g);
+    }
+
+    public void updateSubject(Subject s) {
+        businessController.updateSubject(s);
+    }
+
+    public List<TimePeriod> getTimePeriods() {
+        return businessController.getTimePeriods();
+    }
+
+    public void updateTimePeriod(TimePeriod tp) {
+        businessController.updateTimePeriod(tp);
+    }
+
+    public List<String> getScheduleIds() {
+        return businessController.getScheduleIds();
+    }
+
+    public void addTeacher(Teacher t) {
+        businessController.addTeacher(t);
+    }
+
+
+    public List<Schedule> getAllSchedules() {
+        return businessController.getAllSchedules();
+    }
+
+    public void renameSchedule(String id, String name) {
+        businessController.renameSchedule(id, name);
+    }
+
+    public void regenerateSchedules() {
+        businessController.regenarateSchedules();
+    }
 }

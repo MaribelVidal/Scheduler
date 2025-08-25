@@ -36,11 +36,21 @@ public class DAOFactory {
 
                 daoInstances.put(clazz, new TimePeriodDAO(conn));
 
-            } else if (clazz == StudentGroup.class) {
 
-                daoInstances.put(clazz, new StudentGroupDAO(conn));
+            } else if (clazz == Condition.class) {
 
-            }  else {
+                daoInstances.put(clazz, new ConditionDAO(conn));
+
+            } else if (clazz == Lesson.class) {
+
+                daoInstances.put(clazz, new LessonDAO(conn));
+
+            } else if (clazz == Schedule.class) {
+
+                daoInstances.put(clazz, new ScheduleDAO(conn));
+
+            }
+            else {
 
                 throw new Exception("DAO not found for class: " + clazz.getSimpleName());
 

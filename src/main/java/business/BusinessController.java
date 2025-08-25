@@ -20,16 +20,16 @@ public class BusinessController {
 
 
 
-    //private PersistenceController persistenceController;
+
+
+    private PersistenceController persistenceController;
 
     public BusinessController() throws Exception {
-        //this.persistenceController = new PersistenceController();
 
-/*
         this.persistenceController = new PersistenceController();
         persistenceController.initialize();
         getFromDataBase();
-*/
+
     }
 
     public List<String> getTeachersNames() {
@@ -80,47 +80,57 @@ public class BusinessController {
         return studentGroups;
     }
 
-    public Schedule getTeacherSchedule(String teacherId, int scheduleId) {
-        // key can be teacher ID, name, or abbreviation
-        Teacher teacher = teachers.stream()
-                .filter(t -> teacherId.equals(t.getId())
-                        || teacherId.equals(t.getName())
-                        || teacherId.equals(t.getAbbreviation()))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Teacher not found: " + teacherId));
-
-        // return the schedule you want (this is just an example)
-        return teacher.getScheduleById(scheduleId);
+    public Schedule getTeacherSchedule(String teacherId, String scheduleId) {
+        if (teacherId == null || scheduleId == null) return null;
+        var teacherOpt = teachers.stream().filter(t -> teacherId.equals(t.getId())).findFirst();
+        if (teacherOpt.isEmpty()) return null; // <-- instead of orElseThrow
+        var t = teacherOpt.get();
+        var s = t.getSchedules() == null ? null :
+                t.getSchedules().stream().filter(sc -> scheduleId.equals(sc.getId())).findFirst().orElse(null);
+        return s;
     }
 
 
-    public Schedule getStudentGroupSchedule (String studentGroupId, int scheduleId) {
-        StudentGroup studentGroup = studentGroups.stream()
-                .filter(sg -> studentGroupId.equals(sg.getId())
-                        || studentGroupId.equals(sg.getName())
-                        || studentGroupId.equals(sg.getAbbreviation()))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Student group not found"));
-        return studentGroup.getScheduleById(scheduleId);
+
+    public Schedule getStudentGroupSchedule(String studentGroupId, String scheduleId) {
+        if (studentGroupId == null || scheduleId == null) return null;
+        var studentGroupOpt = studentGroups.stream().filter(sg -> studentGroupId.equals(sg.getId())).findFirst();
+        if (studentGroupOpt.isEmpty()) return null; // <-- instead of orElseThrow
+        var sg = studentGroupOpt.get();
+        var s = sg.getSchedules() == null ? null :
+                sg.getSchedules().stream().filter(sc -> scheduleId.equals(sc.getId())).findFirst().orElse(null);
+        return s;
     }
 
-    public Schedule getClassroomSchedule (String classroomId, int scheduleId) {
-        Classroom classroom = classrooms.stream()
-                .filter(c -> classroomId.equals(c.getId())
-                        || classroomId.equals(c.getName())
-                        || classroomId.equals(c.getAbbreviation()))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Classroom not found"));
-        return classroom.getScheduleById(scheduleId);
+    public Schedule getClassroomSchedule (String classroomId, String scheduleId) {
+        if (classroomId == null || scheduleId == null) return null;
+        var classroomOpt = classrooms.stream().filter(c -> classroomId.equals(c.getId())).findFirst();
+        if (classroomOpt.isEmpty()) return null; // <-- instead of orElseThrow
+        var c = classroomOpt.get();
+        var s = c.getSchedules() == null ? null :
+                c.getSchedules().stream().filter(sc -> scheduleId.equals(sc.getId())).findFirst().orElse(null);
+        return s;
     }
 
 
     private void getFromDataBase () throws Exception {
         teachers = persistenceController.getAll(Teacher.class);
+
+
         studentGroups = persistenceController.getAll(StudentGroup.class);
+
+
         subjects = persistenceController.getAll(Subject.class);
+
         classrooms = persistenceController.getAll(Classroom.class);
+
+
+
         timePeriods = persistenceController.getAll(TimePeriod.class);
+
+
+
+
 
 
     }
@@ -189,6 +199,25 @@ public class BusinessController {
         // Optionally, remove from database
         // persistenceController.remove(Classroom.class, classroomId);
     }
+
+    public void updateClassroom(Classroom classroom) {
+        if (classrooms == null) {
+            classrooms = new ArrayList<>();
+        }
+        int index = classrooms.indexOf(classroom);
+        if (index != -1) {
+            classrooms.set(index, classroom);
+            // Optionally, update in database
+            // persistenceController.update(classroom);
+        } else {
+            System.out.println("Classroom not found for update: " + classroom.getId());
+        }
+    }
+
+    public List<Subject> getSubjects() {
+        return subjects;
+    }
+
     public void addNewStudentGroup(StudentGroup studentGroup) {
         if (studentGroups == null) {
             studentGroups = new ArrayList<>();
@@ -241,163 +270,12 @@ public class BusinessController {
         // persistenceController.remove(Subject.class, subjectId);
     }
 
-    /**
-     * Updates an existing teacher by ID. Only basic fields are updated here.
-     * If the teacher is not found, nothing happens.
-     */
-    public void updateTeacher(Teacher updated) {
-        if (updated == null || updated.getId() == null) return;
-        if (teachers == null) return;
-
-        for (int i = 0; i < teachers.size(); i++) {
-            Teacher curr = teachers.get(i);
-            if (updated.getId().equals(curr.getId())) {
-                // Update in place to preserve object references elsewhere
-                curr.setName(updated.getName());
-                curr.setEmail(updated.getEmail());
-                curr.setPhone(updated.getPhone());
-                curr.setDepartment(updated.getDepartment());
-                curr.setHoursWork(updated.getHoursWork());
-                // Extend here if you want to sync other fields/lists (roles, subjects, etc.)
-                // Optionally persist using your persistence layer here.
-                return;
-            }
-        }
-    }
-
-
     public void solve (){
         //this.solver = new ScheduleSolver(teachers, studentGroups, subjects, classrooms, timePeriods);
 
     }
 
 
-    // Método para crear datos de ejemplo
-    public void createExampleData() {
-        try {
-            /* 1. Crear departamentos
-            Department dep1 = new Department("DEP1", "Informática");
-            Department dep2 = new Department("DEP2", "Matemáticas");
-*/
-            // 2. Crear profesores
-            Teacher teacher1 = new Teacher("T4", "Juan Pérez", "JPZ");
-            teacher1.setEmail("juan@ejemplo.com");
-            teacher1.setPhone("666111222");
-            teacher1.setHoursWork(15);
-
-            Teacher teacher2 = new Teacher("T5", "María López", "MLZ");
-            teacher2.setEmail("maria@ejemplo.com");
-            teacher2.setPhone("666333444");
-            teacher2.setHoursWork(15);
-
-            Teacher teacher3 = new Teacher("T6", "Pepe Pez", "MLZ");
-            teacher3.setEmail("maria@ejemplo.com");
-            teacher3.setPhone("666333444");
-            teacher3.setHoursWork(15);
-
-            // 3. Crear aulas
-            Classroom classroom1 = new Classroom("C4", "Aula 101", "A101");
-            classroom1.setCapacity(30);
-            classroom1.setClassroomType("Normal");
-
-            Classroom classroom2 = new Classroom("C5", "Laboratorio", "LAB");
-            classroom2.setCapacity(25);
-            classroom2.setClassroomType("Laboratorio");
-
-
-            // 4. Crear activities
-
-            Activity activity1 = new Activity("A1", "Actividad 1", "ACT1");
-            activity1.setClassroom(classroom1);
-            activity1.setTeachers(List.of(teacher1, teacher2));
-
-            // 4. Crear asignaturas
-            Subject subject1 = new Subject("S5", "Programación", "PROG");
-            subject1.setCourse("1º DAM");
-            subject1.setDepartment("dep1");
-            //subject1.setAssignedClassroom(classroom1);
-            subject1.setWeeklyAssignedHours(1);
-
-            Subject subject2 = new Subject("S6", "Bases de Datos", "BBDD");
-            subject2.setCourse("1º DAM");
-            subject2.setDepartment("dep2");
-            subject2.setAssignedClassroom(classroom2);
-            subject2.setWeeklyAssignedHours(3);
-            //classroom1.addAssignedSubject(subject1);
-
-            // 5. Crear grupos de estudiantes
-            StudentGroup group1 = new StudentGroup("G3", "Primer curso DAM", "1DAM");
-            group1.setCourse("1º DAM");
-            group1.setAssignedTutor(teacher1);
-            group1.setNumberOfStudents(25);
-            group1.setRequiredSubjects(List.of(subject1, subject2));
-
-            StudentGroup group2 = new StudentGroup("G4", "Primer curso DAM", "1DAM");
-            group2.setCourse("2º DAM");
-            group2.setAssignedTutor(teacher1);
-            group2.setNumberOfStudents(25);
-            group2.setRequiredSubjects(List.of(subject1, subject2));
-
-            // 6. Crear periodos de tiempo
-            LocalTime start = LocalTime.of(9, 0);
-            LocalTime end = LocalTime.of(10, 0);
-            TimePeriod period1 = new TimePeriod("TP4", "Lunes", start, end);
-            //teacher1.addUnavailableTimePeriods(period1);
-
-            start = LocalTime.of(11, 0);
-            end = LocalTime.of(12, 0);
-            TimePeriod period2 = new TimePeriod("TP5", "Lunes", start, end);
-
-
-            // 7. Asignar asignaturas a profesores
-            teacher1.addPossibleSubject(subject1);
-            teacher1.addPossibleSubject(subject2);
-            teacher2.addPossibleSubject(subject1);
-            teacher2.addPossibleSubject(subject2);
-
-
-
-            // 8. Guardar en base de datos
-            /*
-            departmentDAO.add(dep1);
-            departmentDAO.add(dep2);
-
-
-*/
-            /*
-            persistenceController.add(classroom1);
-            persistenceController.add(classroom2);
-            persistenceController.add(subject1);
-            persistenceController.add(subject2);
-            persistenceController.add(teacher1);
-            persistenceController.add(teacher2);
-            persistenceController.add(teacher3);
-            persistenceController.add(activity1);
-            persistenceController.add(group1);
-            persistenceController.add(group2);
-            persistenceController.add(period1);
-            persistenceController.add(period2);
-
-            System.out.println("Datos de ejemplo creados correctamente");
-*/
-            teachers.add(teacher1);
-            teachers.add(teacher2);
-            teachers.add(teacher3);
-            classrooms.add(classroom1);
-            classrooms.add(classroom2);
-            subjects.add(subject1);
-            subjects.add(subject2);
-            studentGroups.add(group1);
-            studentGroups.add(group2);
-            timePeriods.add(period1);
-            timePeriods.add(period2);
-
-
-        } catch (Exception e) {
-            System.err.println("Error creando datos de ejemplo: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
 
     public void testH() {
         // Define sample data (replace with your actual data loading)
@@ -488,18 +366,154 @@ public class BusinessController {
 
 
         System.out.println("Attempting to create schedule...");
+        generateSchedules(true);
+
+
+    }
+
+    public void generateSchedules(boolean test) {
         ScheduleSolver scheduleSolver = new ScheduleSolver(teachers, classrooms, studentGroups, timePeriods);
-        List<Schedule> generatedSchedules = scheduleSolver.createSchedule();
-        for (Schedule generatedSchedule : generatedSchedules) {
-            System.out.println("Generated Schedule:");
+        if (test) {
+            List<Schedule> generatedSchedules = scheduleSolver.createSchedule();
+            for (Schedule generatedSchedule : generatedSchedules) {
+                System.out.println("Generated Schedule:");
 
-            if (generatedSchedule != null) {
-                generatedSchedule.printSchedule();
-                generatedSchedule.calculateConditions(teachers);
+                if (generatedSchedule != null) {
+                    generatedSchedule.printSchedule();
+                    generatedSchedule.calculateConditions(teachers);
 
-            } else {
-                System.out.println("Failed to generate a schedule.");
+                } else {
+                    System.out.println("Failed to generate a schedule.");
+                }
             }
         }
+
+    }
+
+    public void updateTeacher(Teacher teacher) {
+        if (teachers == null) {
+            teachers = new ArrayList<>();
+        }
+        int index = teachers.indexOf(teacher);
+        if (index != -1) {
+            teachers.set(index, teacher);
+            // Optionally, update in database
+            // persistenceController.update(teacher);
+        } else {
+            System.out.println("Teacher not found for update: " + teacher.getId());
+        }
+    }
+
+    public List<TimePeriod> getTimePeriods() {
+        return timePeriods;
+    }
+
+    public void updateStudentGroup(StudentGroup g) {
+        if (studentGroups == null) {
+            studentGroups = new ArrayList<>();
+        }
+        int index = studentGroups.indexOf(g);
+        if (index != -1) {
+            studentGroups.set(index, g);
+            // Optionally, update in database
+            // persistenceController.update(g);
+        } else {
+            System.out.println("Student group not found for update: " + g.getId());
+        }
+    }
+
+    public void updateSubject(Subject s) {
+        if (subjects == null) {
+            subjects = new ArrayList<>();
+        }
+        int index = subjects.indexOf(s);
+        if (index != -1) {
+            subjects.set(index, s);
+            // Optionally, update in database
+            // persistenceController.update(s);
+        } else {
+            System.out.println("Subject not found for update: " + s.getId());
+        }
+    }
+
+    public void updateTimePeriod(TimePeriod tp) {
+        if (timePeriods == null) {
+            timePeriods = new ArrayList<>();
+        }
+        int index = timePeriods.indexOf(tp);
+        if (index != -1) {
+            timePeriods.set(index, tp);
+            // Optionally, update in database
+            // persistenceController.update(tp);
+        } else {
+            System.out.println("Time period not found for update: " + tp.getId());
+        }
+    }
+
+    public List<String> getScheduleIds() {
+        List<String> scheduleIds = new ArrayList<>();
+        for (Teacher teacher : teachers) {
+            for (Schedule schedule : teacher.getSchedules()) {
+                scheduleIds.add(schedule.getId());
+            }
+        }
+
+        return scheduleIds;
+    }
+
+    public void addTeacher(Teacher t) {
+        if (teachers == null) {
+            teachers = new ArrayList<>();
+        }
+        teachers.add(t);
+        // Optionally, save to database
+        // persistenceController.add(t);
+    }
+
+    public List<Schedule> getAllSchedules() {
+        List<Schedule> schedules = new ArrayList<>();
+        for (Teacher teacher : teachers) {
+            schedules.addAll(teacher.getSchedules());
+            break;
+        }
+        return schedules;
+    }
+
+    public void renameSchedule(String id, String name) {
+        for (Teacher teacher : teachers) {
+            for (Schedule schedule : teacher.getSchedules()) {
+                if (schedule.getId().equals(id)) {
+                    schedule.setName(name);
+                    // Optionally, update in database
+                    // persistenceController.update(schedule);
+                    return; // Exit after renaming the first matching schedule
+                }
+            }
+        }
+        for (StudentGroup studentGroup : studentGroups) {
+            for (Schedule schedule : studentGroup.getSchedules()) {
+                if (schedule.getId().equals(id)) {
+                    schedule.setName(name);
+                    // Optionally, update in database
+                    // persistenceController.update(schedule);
+                    return; // Exit after renaming the first matching schedule
+                }
+            }
+        }
+        for (Classroom classroom : classrooms) {
+            for (Schedule schedule : classroom.getSchedules()) {
+                if (schedule.getId().equals(id)) {
+                    schedule.setName(name);
+                    // Optionally, update in database
+                    // persistenceController.update(schedule);
+                    return; // Exit after renaming the first matching schedule
+                }
+            }
+        }
+    }
+
+    public void regenarateSchedules() {
+        generateSchedules(false);
+
     }
 }

@@ -1,77 +1,48 @@
 package business;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Representa un profesor con sus preferencias, restricciones y datos personales.
  */
 public class Teacher extends Entity {
 
-    private String email; // Correo electrónico del profesor
-    private String phone; // Teléfono de contacto
-    private String department; // Departamento al que pertenece el profesor
-    //private boolean tutorial;
-    private List<String> role; // Roles del profesor (tutor, jefe de estudios, etc.)
-    private List<Subject> possibleSubjects; // Asignaturas que puede impartir según sus habilitaciones
-    //private TimePeriod timePeriod;
-    private int hoursWork; // Máximo número de horas de trabajo semanales
-    //private int assignedHoursWork; // Horas de docencia asignadas
-    private List<Condition> preferredConditions;
-    private List<Condition> unPreferredConditions;
+    private String email;
+    private String phone;
+    private String department;
+    private List<String> role;
+
+    private final List<Subject> possibleSubjects;        // FIX: final + always mutable
+    private int hoursWork;
+
+    private final List<Condition> preferredConditions;   // FIX: final + mutable
+    private final List<Condition> unPreferredConditions;
 
     private int achievedConditions;
-    private int weightedConditions; // Condiciones ponderadas cumplidas
+    private int weightedConditions;
 
-    // Lista de lecciones asignadas al profesor
+    private final List<TimePeriod> unavailableTimePeriods;   // FIX: final + mutable
+    private final List<TimePeriod> preferredTimePeriods;
+    private final List<TimePeriod> unPreferredTimePeriods;
 
-    //PREFERENCIAS Y RESTRICCIONES
+    private final List<Subject> preferredSubjects;
+    private final List<StudentGroup> preferredStudentGroups;
+    private final List<StudentGroup> unPreferredStudentGroups;
 
-    // Horario: Lista de periodos de tiempo en los que el profesor NO está disponible
-    private List<TimePeriod> unavailableTimePeriods; // Horarios no disponibles
+    private double percentageAchievedConditions;
+    private double percentageWeightedConditions;
 
-    // Horario: Lista de periodos de tiempo preferidos por el profesor
-    private List<TimePeriod> preferredTimePeriods; // Horarios preferidos
+    private List<Schedule> schedules;
 
-    // Horario: Lista de periodos de tiempo NO deseables por el profesor
-    private List<TimePeriod> unPreferredTimePeriods; // Horarios no deseados
-
-    // Asignaturas: Lista de asignaturas preferidas por el profesor
-    private List<Subject> preferredSubjects; // Asignaturas preferidas
-    //Todo Controlar ls asignaturas preferidas estén incluidas en la lista de asignaturas posibles
-
-    // Grupos de alumnos: Lista de grupos de grupos de alumnos preferidos por el profesor
-    private List<StudentGroup> preferredStudentGroups; // Grupos de alumnos preferidos
-
-    // Grupos de alumnos: Lista de grupos de grupos de alumnos No deseables por el profesor
-    private List<StudentGroup> unPreferredStudentGroups; // Grupos de alumnos no deseado
-    //Todo soft Constraint asociada a los grupos de estudiantes no deseados.
-    //Todo Controlar las Soft y Hard Constraints asociadas a horas de docencia asignadas, no a las horas máximas
-
-    private double percentageAchievedConditions; // Porcentaje de condiciones cumplidas
-    private double percentageWeightedConditions; // Porcentaje de condiciones ponderadas cumplidas
-
-    private List<Schedule> schedules; // Lista de horarios asignados al profesor
-
-
-
-
-    /**
-     * Constructor principal de Teacher.
-     * @param id Identificador único
-     * @param name Nombre completo
-     * @param abbreviation Abreviatura
-     */
     public Teacher(String id, String name, String abbreviation) {
         super(id, name, abbreviation);
-        this.possibleSubjects= new ArrayList<>();
-        this.hoursWork= 25;
-        //Todo: Inicializar roles con un rol por defecto, por ejemplo "Profesor"
-        //Todo: Inicializar horas de trabajo máximas por cada profesor
-        //Todo: Inicializar las horas de docencia asignadas a cada profesor.
-        this.unavailableTimePeriods= new ArrayList<>();
-        this.preferredTimePeriods= new ArrayList<>();
-        this.unPreferredTimePeriods= new ArrayList<>();
+        this.possibleSubjects = new ArrayList<>();
+        this.hoursWork = 25;
+
+        this.unavailableTimePeriods = new ArrayList<>();
+        this.preferredTimePeriods = new ArrayList<>();
+        this.unPreferredTimePeriods = new ArrayList<>();
         this.preferredSubjects = new ArrayList<>();
         this.preferredStudentGroups = new ArrayList<>();
         this.unPreferredStudentGroups = new ArrayList<>();
@@ -81,310 +52,237 @@ public class Teacher extends Entity {
         this.percentageWeightedConditions = 0.0;
     }
 
-    // Métodos getter y setter para los datos personales y preferencias
-
-    public List<Schedule> getSchedules() {
-        return schedules;
-    }
-
-    public void setSchedules(List<Schedule> schedules) {
-        this.schedules = schedules;
-    }
-
+    // ---------------- Schedules ----------------
+    public List<Schedule> getSchedules() { return schedules; }
+    public void setSchedules(List<Schedule> schedules) { this.schedules = schedules; }
     public void addSchedule(Schedule schedule) {
-        if (schedules == null) {
-            schedules = new ArrayList<>();
-        }
+        if (schedules == null) schedules = new ArrayList<>();
         schedules.add(schedule);
     }
-
-
     public Schedule getScheduleById(String Id){
-        for (Schedule schedule : schedules) {
-            if (schedule.getId().equals(Id)) {
-                return schedule;
-            }
-        }
-        return null; // or throw an exception if not found
+        if (schedules == null) return null;
+        for (Schedule schedule : schedules) if (schedule.getId().equals(Id)) return schedule;
+        return null;
     }
 
-    public String getEmail() {
-        return email;
-    }
-    public void setEmail(String email) {
-        this.email = email;
-    }
+    // ---------------- Basics ----------------
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
+    public List<String> getRole() { return role; }
+    public void setRole(List<String> role) { this.role = role; }
+    public int getHoursWork() { return hoursWork; }
+    public void setHoursWork(int hoursWork) { this.hoursWork = hoursWork; }
 
-    public String getPhone() {
-        return phone;
-    }
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
+    // ---------------- Possible subjects (ALWAYS MUTABLE) ----------------
+    public List<Subject> getPossibleSubjects() { return possibleSubjects; }
 
-    public String getDepartment() {
-        return department;
+    /** Replaces the internal list with a mutable copy. */
+    public void setPossibleSubjects(List<Subject> list) {     // FIX: defensive copy
+        this.possibleSubjects.clear();
+        if (list != null) this.possibleSubjects.addAll(list);
     }
-    public void setDepartment(String department) {
-        this.department = department;
+    public void addPossibleSubject(Subject subject){          // helper
+        if (subject != null && !possibleSubjects.contains(subject)) possibleSubjects.add(subject);
     }
-
-    public List<String> getRole() {
-        return role;
-    }
-    public void setRole(List<String> role) {
-        this.role = role;
-    }
-
-    public List<Subject> getPossibleSubjects() {
-        return possibleSubjects;
-    }
-    public void setPossibleSubjects(List<Subject> possibleSubjects) {
-        this.possibleSubjects = possibleSubjects;
-    }
-    /**
-     * Añade una asignatura a la lista de posibles asignaturas que puede impartir el profesor.
-     */
-    public void addPossibleSubject(Subject subject){
-        possibleSubjects.add(subject);
+    public boolean removePossibleSubjectById(String subjectId){ // NEW
+        return possibleSubjects.removeIf(s -> s.getId().equals(subjectId));
     }
 
-    public int getHoursWork() {
-        return hoursWork;
+    // ---------------- Availability ----------------
+    public List<TimePeriod> getUnavailableTimePeriods() { return unavailableTimePeriods; }
+    public void setUnavailableTimePeriods(List<TimePeriod> l) { // FIX: defensive copy
+        unavailableTimePeriods.clear();
+        if (l != null) unavailableTimePeriods.addAll(l);
     }
-    public void setHoursWork(int hoursWork) {
-        this.hoursWork = hoursWork;
+    public void addUnavailableTimePeriod(TimePeriod tp) { if (tp != null) unavailableTimePeriods.add(tp); }
+    public boolean removeUnavailableTimePeriodById(String tpId) { // NEW
+        return unavailableTimePeriods.removeIf(tp -> tp.getId().equals(tpId));
     }
+    public boolean isAvailable(TimePeriod timePeriod) { return !unavailableTimePeriods.contains(timePeriod); }
 
-
-
-    public List<TimePeriod> getUnavailableTimePeriods() {
-        return unavailableTimePeriods;
+    // ---------------- Preferred/Unpreferred TimePeriods ----------------
+    public List<TimePeriod> getPreferredTimePeriods() { return preferredTimePeriods; }
+    public void setPreferredTimePeriods(List<TimePeriod> list, int weight) {
+        preferredTimePeriods.clear();
+        if (list != null) preferredTimePeriods.addAll(list);
+        // rebuild conditions for time periods of this type
+        preferredConditions.removeIf(c -> c.getEntity() instanceof TimePeriod);
+        if (list != null) for (TimePeriod tp : list) preferredConditions.add(new Condition(this, weight, tp));
     }
-    public void setUnavailableTimePeriods(List<TimePeriod> unavailableTimePeriods) {
-        this.unavailableTimePeriods = unavailableTimePeriods;
+    public void addPreferredTimePeriod(TimePeriod tp, int weight) {
+        if (tp == null) return;
+        if (!preferredTimePeriods.contains(tp)) preferredTimePeriods.add(tp);
+        preferredConditions.add(new Condition(this, weight, tp));
     }
-    /**
-     * Añade un periodo a la lista de periodos no disponibles.
-     */
-    public void addUnavailableTimePeriods(TimePeriod timePeriod) {
-        unavailableTimePeriods.add(timePeriod);
-    }
-
-    /**
-     * Comprueba si el profesor está disponible en un periodo de tiempo dado.
-     * @param timePeriod Periodo de tiempo a comprobar
-     * @return true si el profesor está disponible, false si no lo está
-     */
-    public boolean isAvailable(TimePeriod timePeriod) {
-        return !unavailableTimePeriods.contains(timePeriod);
-    }
-
-    /**
-     * Comprueba si el profesor puede impartir una asignatura.
-     * @param subject Asignatura a comprobar
-     * @return true si el profesor puede impartir la asignatura, false si no puede
-     */
-    public boolean canTeach(Subject subject) {    return possibleSubjects.contains(subject);}
-
-
-    public List<TimePeriod> getPreferredTimePeriods() {
-        return preferredTimePeriods;
+    public boolean removePreferredTimePeriodById(String tpId) { // NEW (keeps conditions in sync)
+        boolean removed = preferredTimePeriods.removeIf(tp -> tp.getId().equals(tpId));
+        if (removed) preferredConditions.removeIf(c -> c.getEntity() instanceof TimePeriod
+                && ((TimePeriod)c.getEntity()).getId().equals(tpId));
+        return removed;
     }
 
-    public void setPreferredTimePeriods(List<TimePeriod> preferredTimePeriods, int weight) {
-        this.preferredTimePeriods = preferredTimePeriods;
-        //preferredConditions = new ArrayList<>();
-        for (TimePeriod timePeriod : preferredTimePeriods) {
-
-            preferredConditions.add (new Condition(this, weight, timePeriod))  ;
-
-        }
-
+    public List<TimePeriod> getUnPreferredTimePeriods() { return unPreferredTimePeriods; }
+    public void setUnPreferredTimePeriods(List<TimePeriod> list, int weight) {
+        unPreferredTimePeriods.clear();
+        if (list != null) unPreferredTimePeriods.addAll(list);
+        unPreferredConditions.removeIf(c -> c.getEntity() instanceof TimePeriod);
+        if (list != null) for (TimePeriod tp : list) unPreferredConditions.add(new Condition(this, weight, tp));
     }
-    /**
-     * Añade un periodo a la lista de periodos preferidos.
-     * @param timePeriod Periodo de tiempo preferido
-     */
-    public void addPreferredTimePeriod(TimePeriod timePeriod, int weight) {
-
-        preferredTimePeriods.add(timePeriod);
-        preferredConditions.add (new Condition(this, weight, timePeriod));
+    public void addUnPreferredTimePeriod(TimePeriod tp, int weight) {
+        if (tp == null) return;
+        if (!unPreferredTimePeriods.contains(tp)) unPreferredTimePeriods.add(tp);
+        unPreferredConditions.add(new Condition(this, weight, tp));
     }
-
-    /**
-     * Indica si el profesor prefiere un periodo dado.
-     */
-    public boolean prefersTimePeriod(TimePeriod timePeriod) {
-        return preferredTimePeriods.contains(timePeriod);
+    public boolean removeUnPreferredTimePeriodById(String tpId) { // NEW
+        boolean removed = unPreferredTimePeriods.removeIf(tp -> tp.getId().equals(tpId));
+        if (removed) unPreferredConditions.removeIf(c -> c.getEntity() instanceof TimePeriod
+                && ((TimePeriod)c.getEntity()).getId().equals(tpId));
+        return removed;
     }
 
-    public List<TimePeriod> getUnPreferredTimePeriods() {
-        return unPreferredTimePeriods;
+    // ---------------- Preferred/Unpreferred Subjects ----------------
+    public List<Subject> getPreferredSubjects() { return preferredSubjects; }
+    public void setPreferredSubjects(List<Subject> list, int weight) {
+        preferredSubjects.clear();
+        if (list != null) preferredSubjects.addAll(list);
+        preferredConditions.removeIf(c -> c.getEntity() instanceof Subject);
+        if (list != null) for (Subject s : list) preferredConditions.add(new Condition(this, weight, s));
     }
-
-    public void setUnPreferredTimePeriods(List<TimePeriod> unPreferredTimePeriods, int weight) {
-        this.unPreferredTimePeriods = unPreferredTimePeriods;
-
-        for (TimePeriod timePeriod : unPreferredTimePeriods) {
-
-            unPreferredConditions.add (new Condition(this, weight, timePeriod))  ;
-
-        }
-    }
-
-
-    public void addUnPreferredTimePeriod(TimePeriod timePeriod, int weight) {
-        unPreferredTimePeriods.add(timePeriod);
-
-        unPreferredConditions.add (new Condition(this, weight, timePeriod));
-
-    }
-    /**
-     * Indica si al profesor le disgusta un periodo dado.
-     */
-
-
-
-    public boolean dislikesTimePeriod(TimePeriod timePeriod) {
-        return unPreferredTimePeriods.contains(timePeriod);
-    }
-
-    public List<Subject> getPreferredSubjects() {
-        return preferredSubjects;
-    }
-    public void setPreferredSubjects(List<Subject> preferredSubjects, int weight) {
-        this.preferredSubjects = preferredSubjects;
-
-        for (Subject subject : preferredSubjects) {
-
-            preferredConditions.add (new Condition(this, weight, subject))  ;
-
-        }
-        
-    }
-
-
     public void addPreferredSubject(Subject subject, int weight) {
-        preferredSubjects.add(subject);
-        preferredConditions.add (new Condition(this, weight, subject));
+        if (subject == null) return;
+        if (!preferredSubjects.contains(subject)) preferredSubjects.add(subject);
+        preferredConditions.add(new Condition(this, weight, subject));
+    }
+    public boolean removePreferredSubjectById(String subjectId) { // NEW
+        boolean removed = preferredSubjects.removeIf(s -> s.getId().equals(subjectId));
+        if (removed) preferredConditions.removeIf(c -> c.getEntity() instanceof Subject
+                && ((Subject)c.getEntity()).getId().equals(subjectId));
+        return removed;
     }
 
-    public List<StudentGroup> getPreferredStudentGroups() {
-        return preferredStudentGroups;
+    // ---------------- Preferred/Unpreferred StudentGroups ----------------
+    public List<StudentGroup> getPreferredStudentGroups() { return preferredStudentGroups; }
+    public void setPreferredStudentGroups(List<StudentGroup> list, int weight) {
+        preferredStudentGroups.clear();
+        if (list != null) preferredStudentGroups.addAll(list);
+        preferredConditions.removeIf(c -> c.getEntity() instanceof StudentGroup);
+        if (list != null) for (StudentGroup g : list) preferredConditions.add(new Condition(this, weight, g));
+    }
+    public void addPreferredStudentGroup(StudentGroup g, int weight) {
+        if (g == null) return;
+        if (!preferredStudentGroups.contains(g)) preferredStudentGroups.add(g);
+        preferredConditions.add(new Condition(this, weight, g));
+    }
+    public boolean removePreferredStudentGroupById(String groupId) { // NEW
+        boolean removed = preferredStudentGroups.removeIf(g -> g.getId().equals(groupId));
+        if (removed) preferredConditions.removeIf(c -> c.getEntity() instanceof StudentGroup
+                && ((StudentGroup)c.getEntity()).getId().equals(groupId));
+        return removed;
     }
 
-
-    public void setPreferredStudentGroups(List<StudentGroup> preferredStudentGroups, int weight) {
-        this.preferredStudentGroups = preferredStudentGroups;
-        for (StudentGroup studentGroup : preferredStudentGroups) {
-
-            preferredConditions.add (new Condition(this, weight, studentGroup))  ;
-
-        }
+    public List<StudentGroup> getUnPreferredStudentGroups() { return unPreferredStudentGroups; }
+    public void setUnPreferredStudentGroups(List<StudentGroup> list, int weight) {
+        unPreferredStudentGroups.clear();
+        if (list != null) unPreferredStudentGroups.addAll(list);
+        unPreferredConditions.removeIf(c -> c.getEntity() instanceof StudentGroup);
+        if (list != null) for (StudentGroup g : list) unPreferredConditions.add(new Condition(this, weight, g));
+    }
+    public void addUnPreferredStudentGroup(StudentGroup g, int weight) {
+        if (g == null) return;
+        if (!unPreferredStudentGroups.contains(g)) unPreferredStudentGroups.add(g);
+        unPreferredConditions.add(new Condition(this, weight, g));
+    }
+    public boolean removeUnPreferredStudentGroupById(String groupId) { // NEW
+        boolean removed = unPreferredStudentGroups.removeIf(g -> g.getId().equals(groupId));
+        if (removed) unPreferredConditions.removeIf(c -> c.getEntity() instanceof StudentGroup
+                && ((StudentGroup)c.getEntity()).getId().equals(groupId));
+        return removed;
     }
 
-    public void addPreferredStudentGroup(StudentGroup studentGroup, int weight) {
-        preferredStudentGroups.add(studentGroup);
-        preferredConditions.add (new Condition(this, weight, studentGroup));
+    // ---------------- Conditions & percentages ----------------
+    public List<Condition> getPreferredConditions() { return preferredConditions; }
+    public List<Condition> getUnPreferredConditions() { return unPreferredConditions; }
+    public int getAchievedConditions() { return achievedConditions; }
+    public int getWeightedConditions() { return weightedConditions; }
+
+    public void setPreferredConditions(List<Condition> list) { // FIX: defensive copy
+        preferredConditions.clear();
+        if (list != null) preferredConditions.addAll(list);
     }
-
-
-
-
-    public List<StudentGroup> getUnPreferredStudentGroups() {
-        return unPreferredStudentGroups;
-    }
-
-    public void setUnPreferredStudentGroups(List<StudentGroup> unPreferredStudentGroups, int weight) {
-        this.unPreferredStudentGroups = unPreferredStudentGroups;
-        for (StudentGroup studentGroup : unPreferredStudentGroups) {
-
-            unPreferredConditions.add (new Condition(this, weight, studentGroup))  ;
-
-        }
-    }
-
-    public void addUnPreferredStudentGroup(StudentGroup studentGroup, int weight) {
-        unPreferredStudentGroups.add(studentGroup);
-        unPreferredConditions.add (new Condition(this, weight, studentGroup));
-    }
-
-    public List<Condition> getPreferredConditions() {
-        return preferredConditions;
-    }
-
-    public List<Condition> getUnPreferredConditions() {
-        return unPreferredConditions;
-    }
-
-    public int getAchievedConditions() {
-        return achievedConditions;
-    }
-
-    public void setPreferredConditions(List<Condition> preferredConditions) {
-        this.preferredConditions = preferredConditions;
-    }
-
-    public void setUnPreferredConditions(List<Condition> unPreferredConditions) {
-        this.unPreferredConditions = unPreferredConditions;
-    }
-
-    public void setPreferredTimePeriods(List<TimePeriod> preferredTimePeriods) {
-        this.preferredTimePeriods = preferredTimePeriods;
-    }
-
-    public void setUnPreferredTimePeriods(List<TimePeriod> unPreferredTimePeriods) {
-        this.unPreferredTimePeriods = unPreferredTimePeriods;
-    }
-
-    public void setPreferredSubjects(List<Subject> preferredSubjects) {
-        this.preferredSubjects = preferredSubjects;
-    }
-
-    public void setPreferredStudentGroups(List<StudentGroup> preferredStudentGroups) {
-        this.preferredStudentGroups = preferredStudentGroups;
-    }
-
-    public void setUnPreferredStudentGroups(List<StudentGroup> unPreferredStudentGroups) {
-        this.unPreferredStudentGroups = unPreferredStudentGroups;
-    }
-
-    public void setPercentageAchievedConditions(double percentageAchievedConditions) {
-        this.percentageAchievedConditions = percentageAchievedConditions;
-    }
-
-    public void setPercentageWeightedConditions(double percentageWeightedConditions) {
-        this.percentageWeightedConditions = percentageWeightedConditions;
-    }
-
-    public double getPercentageAchievedConditions() {
-        return percentageAchievedConditions;
-    }
-
-    public double getPercentageWeightedConditions() {
-        return percentageWeightedConditions;
+    public void setUnPreferredConditions(List<Condition> list) {
+        unPreferredConditions.clear();
+        if (list != null) unPreferredConditions.addAll(list);
     }
 
     public void setAchievedConditions(int achievedConditions) {
         this.achievedConditions = achievedConditions;
-        int totalConditions = preferredConditions.size() + unPreferredConditions.size();
-        this.percentageAchievedConditions = (double) achievedConditions / totalConditions * 100;
-    }
-
-    public int getWeightedConditions() {
-        return weightedConditions;
+        int total = preferredConditions.size() + unPreferredConditions.size();
+        this.percentageAchievedConditions = total == 0 ? 0.0 : (double) achievedConditions / total * 100.0;
     }
 
     public void setWeightedConditions(int weightedConditions) {
         this.weightedConditions = weightedConditions;
-        double totalWeightedConditions = 0.0;
-        for (Condition condition : preferredConditions) {
-            totalWeightedConditions += condition.getWeight();
-        }
-        for (Condition condition : unPreferredConditions) {
-            totalWeightedConditions += condition.getWeight();
-        }
-        this.percentageWeightedConditions = (double) weightedConditions / totalWeightedConditions * 100;
+        double totalW = 0.0;
+        for (Condition c : preferredConditions) totalW += c.getWeight();
+        for (Condition c : unPreferredConditions) totalW += c.getWeight();
+        this.percentageWeightedConditions = totalW <= 0 ? 0.0 : (double) weightedConditions / totalW * 100.0;
+    }
+    public double getPercentageAchievedConditions() { return percentageAchievedConditions; }
+    public double getPercentageWeightedConditions() { return percentageWeightedConditions; }
+
+    // -------- maps/updates for GUI --------
+    public Map<String, Integer> getPreferredSubjectWeights() {
+        return preferredConditions.stream()
+                .filter(c -> c.getEntity() instanceof Subject)
+                .collect(Collectors.toMap(c -> ((Subject)c.getEntity()).getId(), Condition::getWeight, (a,b)->b));
+    }
+    public Map<String, Integer> getPreferredStudentGroupWeights() {
+        return preferredConditions.stream()
+                .filter(c -> c.getEntity() instanceof StudentGroup)
+                .collect(Collectors.toMap(c -> ((StudentGroup)c.getEntity()).getId(), Condition::getWeight, (a,b)->b));
+    }
+    public Map<String, Integer> getUnPreferredStudentGroupWeights() {
+        return unPreferredConditions.stream()
+                .filter(c -> c.getEntity() instanceof StudentGroup)
+                .collect(Collectors.toMap(c -> ((StudentGroup)c.getEntity()).getId(), Condition::getWeight, (a,b)->b));
+    }
+    public Map<String, Integer> getPreferredTimePeriodWeights() {
+        return preferredConditions.stream()
+                .filter(c -> c.getEntity() instanceof TimePeriod)
+                .collect(Collectors.toMap(c -> ((TimePeriod)c.getEntity()).getId(), Condition::getWeight, (a,b)->b));
+    }
+    public Map<String, Integer> getUnPreferredTimePeriodWeights() {
+        return unPreferredConditions.stream()
+                .filter(c -> c.getEntity() instanceof TimePeriod)
+                .collect(Collectors.toMap(c -> ((TimePeriod)c.getEntity()).getId(), Condition::getWeight, (a,b)->b));
+    }
+
+    public void updatePreferredSubjectWeight(String id, int w) {
+        for (Condition c : preferredConditions)
+            if (c.getEntity() instanceof Subject s && s.getId().equals(id)) { c.setWeight(w); return; }
+    }
+    public void updatePreferredStudentGroupWeight(String id, int w) {
+        for (Condition c : preferredConditions)
+            if (c.getEntity() instanceof StudentGroup g && g.getId().equals(id)) { c.setWeight(w); return; }
+    }
+    public void updateUnPreferredStudentGroupWeight(String id, int w) {
+        for (Condition c : unPreferredConditions)
+            if (c.getEntity() instanceof StudentGroup g && g.getId().equals(id)) { c.setWeight(w); return; }
+    }
+    public void updatePreferredTimePeriodWeight(String id, int w) {
+        for (Condition c : preferredConditions)
+            if (c.getEntity() instanceof TimePeriod tp && tp.getId().equals(id)) { c.setWeight(w); return; }
+    }
+    public void updateUnPreferredTimePeriodWeight(String id, int w) {
+        for (Condition c : unPreferredConditions)
+            if (c.getEntity() instanceof TimePeriod tp && tp.getId().equals(id)) { c.setWeight(w); return; }
+    }
+
+    public boolean canTeach(Subject subject) {
+        return possibleSubjects.contains(subject);
     }
 }

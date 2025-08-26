@@ -18,14 +18,17 @@ import java.util.function.Consumer;
 /**
  * ProfesoresPanel
  * - Edita TODOS los atributos del profesor (id, nombre, abreviatura, email, teléfono, depto., horas)
- * - Gestiona preferencias con peso por elemento:
- *   * Asignaturas: Preferidas / No preferidas  (peso por asignatura)
- *   * Grupos:      Preferidos / No preferidos  (peso por grupo)
- *   * Franjas:     Preferidas / No preferidas / No disponibles (peso por franja)
+ * - Muestra métricas: condiciones logradas y ponderadas (solo lectura)
+ * - Gestiona relaciones:
+ *   * Asignaturas posibles (alta/baja)  -> persistencia explícita
+ *   * Asignaturas preferidas (peso por asignatura)
+ *   * Grupos preferidos / no preferidos (peso por grupo)
+ *   * Franjas preferidas / no preferidas / no disponibles (peso por franja; no disponibles sin peso)
  *
- * UI:
- *  - "Añadir..." abre un selector con elementos que aún no están en ninguna lista del mismo tipo.
- *  - Click derecho en una "chip": Editar peso… | Quitar
+ * Requiere que PresentationController exponga:
+ *   - List<Subject> getTeacherPossibleSubjects(String teacherId)
+ *   - void addTeacherPossibleSubject(String teacherId, String subjectId)
+ *   - void removeTeacherPossibleSubject(String teacherId, String subjectId)
  */
 public class ProfesoresPanel extends JPanel {
 
@@ -38,16 +41,19 @@ public class ProfesoresPanel extends JPanel {
     // Right-top: form
     private JTextField idField, nameField, abbrField, emailField, phoneField, deptField;
     private JSpinner hoursSpinner;
+    private JLabel achievedLabel, weightedLabel;
     private JButton newBtn, saveBtn, deleteBtn, revertBtn;
     private boolean creatingNew = false;
     private String currentTeacherId = null;
 
-    // Right-bottom: preference panels (per-item weights)
+    // Right-bottom: panels
+    private SimpleChipPanel possibleSubjectsPanel;
     private WeightedChipPanel subjPreferredPanel;
     private WeightedChipPanel groupPreferredPanel, groupUnpreferredPanel;
     private WeightedChipPanel tpPreferredPanel, tpUnpreferredPanel, tpUnavailablePanel;
 
     // In-memory items (id, label, weight)
+    private List<ItemRef> possibleItems = List.of();
     private List<ItemRef> subjPrefItems = List.of();
     private List<ItemRef> groupPrefItems = List.of(), groupUnprefItems = List.of();
     private List<ItemRef> tpPrefItems = List.of(), tpUnprefItems = List.of(), tpUnavailItems = List.of();
@@ -110,6 +116,7 @@ public class ProfesoresPanel extends JPanel {
         int r=0;
         gc.gridx=0; gc.gridy=r; form.add(new JLabel("ID:"), gc);
         idField = new JTextField(18);
+        idField.setEditable(false);
         gc.gridx=1; gc.gridy=r++; gc.weightx=1; form.add(idField, gc); gc.weightx=0;
 
         gc.gridx=0; gc.gridy=r; form.add(new JLabel("Nombre:"), gc);
@@ -135,6 +142,15 @@ public class ProfesoresPanel extends JPanel {
         gc.gridx=0; gc.gridy=r; form.add(new JLabel("Horas lectivas:"), gc);
         hoursSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 60, 1));
         gc.gridx=1; gc.gridy=r++; gc.weightx=1; form.add(hoursSpinner, gc);
+
+        // Metrics (read-only)
+        gc.gridx=0; gc.gridy=r; form.add(new JLabel("Cond. logradas:"), gc);
+        achievedLabel = new JLabel("-");
+        gc.gridx=1; gc.gridy=r++; form.add(achievedLabel, gc);
+
+        gc.gridx=0; gc.gridy=r; form.add(new JLabel("Cond. ponderadas:"), gc);
+        weightedLabel = new JLabel("-");
+        gc.gridx=1; gc.gridy=r++; form.add(weightedLabel, gc);
 
         wrap.add(form, BorderLayout.CENTER);
 
@@ -167,59 +183,63 @@ public class ProfesoresPanel extends JPanel {
 
         root.add(buildLegend());
 
-        // Subjects
-        root.add(sectionTitle("Asignaturas"));
-        JPanel subjRow = new JPanel(new GridLayout(1,2,8,8));
-        subjPreferredPanel   = new WeightedChipPanel("Preferidas", Status.PREFERRED);
+        // Possible subjects
+        root.add(sectionTitle("Asignaturas posibles"));
+        possibleSubjectsPanel = new SimpleChipPanel();
+        possibleSubjectsPanel.setOnAdd(e -> onAddPossibleSubjects());
+        possibleSubjectsPanel.setOnRemove(id -> onRemovePossibleSubject(id));
+        root.add(possibleSubjectsPanel);
+        root.add(Box.createVerticalStrut(10));
+
+        // Preferred subjects
+        root.add(sectionTitle("Asignaturas (preferidas)"));
+        JPanel subjRow = new JPanel(new GridLayout(1,1,8,8));
+        subjPreferredPanel = new WeightedChipPanel("Preferidas", Status.PREFERRED);
+        subjPreferredPanel.setOnAdd(e -> onAddSubjects(true));
+        subjPreferredPanel.setOnRemove(id -> onRemoveSubject(true, id));
+        subjPreferredPanel.setOnEditWeight(ir -> onEditWeightSubject(true, ir));
         subjRow.add(subjPreferredPanel);
         root.add(subjRow);
-        root.add(Box.createVerticalStrut(8));
+        root.add(Box.createVerticalStrut(10));
 
         // Groups
         root.add(sectionTitle("Grupos de alumnos"));
         JPanel grpRow = new JPanel(new GridLayout(1,2,8,8));
         groupPreferredPanel   = new WeightedChipPanel("Preferidos", Status.PREFERRED);
         groupUnpreferredPanel = new WeightedChipPanel("No preferidos", Status.UNPREFERRED);
-        grpRow.add(groupPreferredPanel);
-        grpRow.add(groupUnpreferredPanel);
-        root.add(grpRow);
-        root.add(Box.createVerticalStrut(8));
-
-        // Time periods
-        root.add(sectionTitle("Franjas horarias"));
-        JPanel tpRow1 = new JPanel(new GridLayout(1,2,8,8));
-        tpPreferredPanel   = new WeightedChipPanel("Preferidas", Status.PREFERRED);
-        tpUnpreferredPanel = new WeightedChipPanel("No preferidas", Status.UNPREFERRED);
-        tpRow1.add(tpPreferredPanel);
-        tpRow1.add(tpUnpreferredPanel);
-        JPanel tpRow2 = new JPanel(new GridLayout(1,1,8,8));
-        tpUnavailablePanel = new WeightedChipPanel("No disponibles", Status.UNAVAILABLE);
-        tpRow2.add(tpUnavailablePanel);
-        root.add(tpRow1);
-        root.add(Box.createVerticalStrut(4));
-        root.add(tpRow2);
-
-        // Wire actions
-        subjPreferredPanel.setOnAdd(e -> onAddSubjects(true));
-        subjPreferredPanel.setOnRemove(id -> onRemoveSubject(true, id));
-        subjPreferredPanel.setOnEditWeight(ir -> onEditWeightSubject(true, ir));
-
         groupPreferredPanel.setOnAdd(e -> onAddGroups(true));
         groupUnpreferredPanel.setOnAdd(e -> onAddGroups(false));
         groupPreferredPanel.setOnRemove(id -> onRemoveGroup(true, id));
         groupUnpreferredPanel.setOnRemove(id -> onRemoveGroup(false, id));
         groupPreferredPanel.setOnEditWeight(ir -> onEditWeightGroup(true, ir));
         groupUnpreferredPanel.setOnEditWeight(ir -> onEditWeightGroup(false, ir));
+        grpRow.add(groupPreferredPanel);
+        grpRow.add(groupUnpreferredPanel);
+        root.add(grpRow);
+        root.add(Box.createVerticalStrut(10));
 
+        // Time periods
+        root.add(sectionTitle("Franjas horarias"));
+        JPanel tpRow1 = new JPanel(new GridLayout(1,2,8,8));
+        tpPreferredPanel   = new WeightedChipPanel("Preferidas", Status.PREFERRED);
+        tpUnpreferredPanel = new WeightedChipPanel("No preferidas", Status.UNPREFERRED);
         tpPreferredPanel.setOnAdd(e -> onAddTimePeriods(Status.PREFERRED));
         tpUnpreferredPanel.setOnAdd(e -> onAddTimePeriods(Status.UNPREFERRED));
-        tpUnavailablePanel.setOnAdd(e -> onAddTimePeriods(Status.UNAVAILABLE));
         tpPreferredPanel.setOnRemove(id -> onRemoveTimePeriod(Status.PREFERRED, id));
         tpUnpreferredPanel.setOnRemove(id -> onRemoveTimePeriod(Status.UNPREFERRED, id));
-        tpUnavailablePanel.setOnRemove(id -> onRemoveTimePeriod(Status.UNAVAILABLE, id));
         tpPreferredPanel.setOnEditWeight(ir -> onEditWeightTP(Status.PREFERRED, ir));
         tpUnpreferredPanel.setOnEditWeight(ir -> onEditWeightTP(Status.UNPREFERRED, ir));
-        tpUnavailablePanel.setOnEditWeight(ir -> onEditWeightTP(Status.UNAVAILABLE, ir));
+        tpRow1.add(tpPreferredPanel);
+        tpRow1.add(tpUnpreferredPanel);
+        JPanel tpRow2 = new JPanel(new GridLayout(1,1,8,8));
+        tpUnavailablePanel = new WeightedChipPanel("No disponibles", Status.UNAVAILABLE);
+        tpUnavailablePanel.setOnAdd(e -> onAddTimePeriods(Status.UNAVAILABLE));
+        tpUnavailablePanel.setOnRemove(id -> onRemoveTimePeriod(Status.UNAVAILABLE, id));
+        // weight edit is ignored for UNAVAILABLE
+        tpRow2.add(tpUnavailablePanel);
+        root.add(tpRow1);
+        root.add(Box.createVerticalStrut(4));
+        root.add(tpRow2);
 
         return root;
     }
@@ -268,17 +288,23 @@ public class ProfesoresPanel extends JPanel {
         phoneField.setText(nz(t.getPhone()));
         deptField.setText(nz(t.getDepartment()));
         try { hoursSpinner.setValue(t.getHoursWork()); } catch (Exception ignore) { hoursSpinner.setValue(0); }
+
+        // Metrics labels
+        achievedLabel.setText(String.valueOf(t.getAchievedConditions()));
+        weightedLabel.setText(String.valueOf(t.getWeightedConditions()));
     }
 
     private void clearForm() {
         idField.setText(""); nameField.setText(""); abbrField.setText("");
         emailField.setText(""); phoneField.setText(""); deptField.setText("");
         hoursSpinner.setValue(0);
+        achievedLabel.setText("-");
+        weightedLabel.setText("-");
         currentTeacherId = null;
 
-        groupPrefItems = groupUnprefItems = List.of();
-        tpPrefItems = tpUnprefItems = tpUnavailItems = List.of();
+        possibleItems = subjPrefItems = groupPrefItems = groupUnprefItems = tpPrefItems = tpUnprefItems = tpUnavailItems = List.of();
 
+        if (possibleSubjectsPanel != null) possibleSubjectsPanel.setItems(List.of());
         if (subjPreferredPanel != null) subjPreferredPanel.setItems(List.of());
         if (groupPreferredPanel != null) groupPreferredPanel.setItems(List.of());
         if (groupUnpreferredPanel != null) groupUnpreferredPanel.setItems(List.of());
@@ -289,23 +315,26 @@ public class ProfesoresPanel extends JPanel {
 
     private void onSave() {
         try {
-            String id   = trimOrNull(idField.getText());
             String name = trimOrNull(nameField.getText());
             String abbr = trimOrNull(abbrField.getText());
 
-            if (id == null || id.isEmpty()) { warn("El ID es obligatorio."); idField.requestFocus(); return; }
             if (name == null || name.isEmpty()) { warn("El nombre es obligatorio."); nameField.requestFocus(); return; }
             if (creatingNew && (abbr == null || abbr.isEmpty())) { warn("La abreviatura es obligatoria."); abbrField.requestFocus(); return; }
 
             if (creatingNew) {
-                if (findTeacherById(id) != null) { warn("Ya existe un profesor con ese ID."); idField.requestFocus(); return; }
-                Teacher t = new Teacher(id, name, abbr);
+                String teacherId = idField.getText();
+                if (teacherId == null || teacherId.isBlank()) teacherId = generateTeacherId();
+                while (findTeacherById(teacherId) != null) teacherId = generateTeacherId();
+
+                Teacher t = new Teacher(teacherId, name, abbr);
                 readOptionalFieldsInto(t);
                 presentationControler.addTeacher(t);
+
+                idField.setText(teacherId);
+                currentTeacherId = teacherId;
                 teachersModel.addElement(t);
                 teachersList.setSelectedValue(t, true);
                 setCreatingNew(false);
-                currentTeacherId = t.getId();
             } else {
                 Teacher t = findTeacherById(currentTeacherId);
                 if (t == null) { error("No se encontró el profesor."); return; }
@@ -314,6 +343,7 @@ public class ProfesoresPanel extends JPanel {
                 readOptionalFieldsInto(t);
                 presentationControler.updateTeacher(t);
                 teachersList.repaint();
+                populateForm(t); // refresh metrics view, if updated server-side
             }
             JOptionPane.showMessageDialog(this, "Guardado correctamente.", "OK", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception ex) {
@@ -357,17 +387,22 @@ public class ProfesoresPanel extends JPanel {
         return null;
     }
 
-    // ===================== PREFERENCES (per-item weights) =====================
+    // ===================== LOAD / MAP =====================
     private void loadTeacherPreferences(String teacherId) {
         if (teacherId == null) {
             clearForm();
             return;
         }
 
-        // Subjects
+        // Possible subjects
+        List<Subject> possible = nvl(presentationControler.getTeacherPossibleSubjects(teacherId));
+        possibleItems = mapSubjects(possible, Collections.emptyMap());
+        possibleSubjectsPanel.setItems(possibleItems);
+
+        // Preferred subjects
         List<Subject> prefSubj   = nvl(presentationControler.getTeacherPreferredSubjects(teacherId));
-        Map<String,Integer> prefSubjW   = nvlMap(presentationControler.getTeacherPreferredSubjectWeights(teacherId));
-        subjPrefItems   = mapSubjects(prefSubj,   prefSubjW);
+        Map<String,Integer> prefSubjW = nvlMap(presentationControler.getTeacherPreferredSubjectWeights(teacherId));
+        subjPrefItems   = mapSubjects(prefSubj, prefSubjW);
         subjPreferredPanel.setItems(subjPrefItems);
 
         // Groups
@@ -388,14 +423,53 @@ public class ProfesoresPanel extends JPanel {
         Map<String,Integer> unprefTPW  = nvlMap(presentationControler.getTeacherUnpreferredTimePeriodWeights(teacherId));
         tpPrefItems    = mapTimePeriods(prefTP,    prefTPW);
         tpUnprefItems  = mapTimePeriods(unprefTP,  unprefTPW);
+        tpUnavailItems = mapTimePeriods(unavailTP, Collections.emptyMap());
         tpPreferredPanel.setItems(tpPrefItems);
         tpUnpreferredPanel.setItems(tpUnprefItems);
         tpUnavailablePanel.setItems(tpUnavailItems);
     }
 
-    // ---- Add handlers (ask for weight) ----
+    // ---- Possible Subjects handlers (explicit persistence) ----
+    private void onAddPossibleSubjects() {
+        ensureTeacherSelected();
+
+        // Available = all subjects minus already-possible
+        Set<String> exclude = new HashSet<>();
+        possibleItems.forEach(i -> exclude.add(i.id));
+
+        List<Subject> all = nvl(presentationControler.getSubjects());
+        List<ItemRef> available = new ArrayList<>();
+        for (Subject s : all) if (!exclude.contains(s.getId())) available.add(new ItemRef(s.getId(), s.getName(), 0));
+
+        List<ItemRef> picked = pickFromList("Seleccionar asignaturas posibles", available);
+        if (picked.isEmpty()) return;
+
+        try {
+            for (ItemRef it : picked) {
+                presentationControler.addTeacherPossibleSubject(currentTeacherId, it.id);
+            }
+            loadTeacherPreferences(currentTeacherId);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            error("Error al agregar asignaturas posibles: " + ex.getMessage());
+        }
+    }
+
+    private void onRemovePossibleSubject(String subjectId) {
+        ensureTeacherSelected();
+        try {
+            presentationControler.removeTeacherPossibleSubject(currentTeacherId, subjectId);
+            loadTeacherPreferences(currentTeacherId);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            error("Error al quitar asignatura posible: " + ex.getMessage());
+        }
+    }
+
+    // ---- Preferred Subjects handlers ----
     private void onAddSubjects(boolean preferred) {
         ensureTeacherSelected();
+        // avoid duplicates w.r.t. preferred subjects list only
         Set<String> exclude = new HashSet<>();
         subjPrefItems.forEach(i -> exclude.add(i.id));
 
@@ -403,7 +477,7 @@ public class ProfesoresPanel extends JPanel {
         List<ItemRef> available = new ArrayList<>();
         for (Subject s : all) if (!exclude.contains(s.getId())) available.add(new ItemRef(s.getId(), s.getName(), 1));
 
-        List<ItemRef> picked = pickFromList("Seleccionar asignaturas", available);
+        List<ItemRef> picked = pickFromList("Seleccionar asignaturas preferidas", available);
         if (picked.isEmpty()) return;
 
         try {
@@ -416,6 +490,7 @@ public class ProfesoresPanel extends JPanel {
         } catch (Exception ex) { ex.printStackTrace(); error("Error al agregar asignaturas: " + ex.getMessage()); }
     }
 
+    // ---- Groups handlers ----
     private void onAddGroups(boolean preferred) {
         ensureTeacherSelected();
         Set<String> exclude = new HashSet<>();
@@ -440,6 +515,7 @@ public class ProfesoresPanel extends JPanel {
         } catch (Exception ex) { ex.printStackTrace(); error("Error al agregar grupos: " + ex.getMessage()); }
     }
 
+    // ---- Time periods handlers ----
     private void onAddTimePeriods(Status status) {
         ensureTeacherSelected();
         Set<String> exclude = new HashSet<>();
@@ -468,7 +544,7 @@ public class ProfesoresPanel extends JPanel {
         } catch (Exception ex) { ex.printStackTrace(); error("Error al agregar franjas: " + ex.getMessage()); }
     }
 
-    // ---- Remove handlers ----
+    // ---- Remove handlers for prefs ----
     private void onRemoveSubject(boolean preferred, String subjectId) {
         ensureTeacherSelected();
         try {
@@ -525,6 +601,7 @@ public class ProfesoresPanel extends JPanel {
             switch (status) {
                 case PREFERRED   -> presentationControler.updateTeacherPreferredTimePeriodWeight(currentTeacherId, ir.id, w);
                 case UNPREFERRED -> presentationControler.updateTeacherUnpreferredTimePeriodWeight(currentTeacherId, ir.id, w);
+                case UNAVAILABLE -> { /* no weight */ }
             }
             loadTeacherPreferences(currentTeacherId);
         } catch (Exception ex) { ex.printStackTrace(); error("Error al editar peso: " + ex.getMessage()); }
@@ -628,6 +705,64 @@ public class ProfesoresPanel extends JPanel {
         @Override public String toString(){ return label; }
     }
 
+    /** Simple chips without weight, with Add and Remove actions (for Asignaturas posibles). */
+    private static class SimpleChipPanel extends JPanel {
+        private final JPanel flow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 6));
+        private final JButton addBtn = new JButton("Añadir...");
+        private Consumer<String> onRemove = id -> {};
+        SimpleChipPanel() {
+            super(new BorderLayout(0,4));
+            JLabel title = new JLabel("Lista");
+            title.setFont(title.getFont().deriveFont(Font.PLAIN, 12f));
+            title.setBorder(new EmptyBorder(0,2,0,0));
+            JPanel top = new JPanel(new BorderLayout());
+            top.add(title, BorderLayout.WEST);
+            top.add(addBtn, BorderLayout.EAST);
+            add(top, BorderLayout.NORTH);
+
+            flow.setOpaque(false);
+            JScrollPane sp = new JScrollPane(flow,
+                    ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+                    ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+            sp.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(235,235,235)),
+                    new EmptyBorder(4,4,4,4)));
+            add(sp, BorderLayout.CENTER);
+        }
+        void setOnAdd(java.awt.event.ActionListener a){ addBtn.addActionListener(a); }
+        void setOnRemove(Consumer<String> c){ this.onRemove = (c==null)?id->{}:c; }
+        void setItems(List<ItemRef> items) {
+            flow.removeAll();
+            if (items == null || items.isEmpty()) {
+                JLabel empty = new JLabel("—");
+                empty.setForeground(Color.GRAY);
+                flow.add(empty);
+            } else for (ItemRef it : items) flow.add(makeChip(it));
+            revalidate(); repaint();
+        }
+        private JComponent makeChip(ItemRef it) {
+            JLabel txt = new JLabel(it.label);
+            txt.setBorder(new EmptyBorder(4,8,4,4));
+
+            JButton close = new JButton("×");
+            close.setMargin(new Insets(0,4,0,4));
+            close.setBorder(BorderFactory.createEmptyBorder(0,6,0,6));
+            close.setFocusable(false);
+            close.setOpaque(false);
+            close.setContentAreaFilled(false);
+            close.setBorderPainted(false);
+            close.setToolTipText("Quitar");
+            close.addActionListener(ev -> onRemove.accept(it.id));
+
+            JPanel inner = new JPanel(new BorderLayout(6,0));
+            inner.setOpaque(false);
+            inner.add(txt, BorderLayout.CENTER);
+            inner.add(close, BorderLayout.EAST);
+
+            return new WeightedChipPanel.RoundedWrapper(inner, new Color(0xEEEEEE), new Color(0xBBBBBB));
+        }
+    }
+
     private static class WeightedChipPanel extends JPanel {
         private final JLabel title;
         private final JPanel flow;
@@ -679,34 +814,44 @@ public class ProfesoresPanel extends JPanel {
 
         private JComponent makeChip(ItemRef it) {
             JLabel txt = new JLabel(it.label + "  (w=" + it.weight + ")");
-            txt.setBorder(new EmptyBorder(4,8,4,8));
+            txt.setBorder(new EmptyBorder(4,8,4,4));
 
-            JComponent chip = new JComponent(){};
-            chip.setLayout(new BorderLayout());
-            chip.add(txt, BorderLayout.CENTER);
-            chip.setBorder(new EmptyBorder(0,0,0,0));
-            chip.setOpaque(false);
+            JButton close = new JButton("×");
+            close.setMargin(new Insets(0,4,0,4));
+            close.setBorder(BorderFactory.createEmptyBorder(0,6,0,6));
+            close.setFocusable(false);
+            close.setOpaque(false);
+            close.setContentAreaFilled(false);
+            close.setBorderPainted(false);
+            close.setToolTipText("Quitar");
+            close.addActionListener(ev -> onRemove.accept(it.id));
 
-            JComponent finalChip = chip;
-            chip.addMouseListener(new MouseAdapter() {
+            JPanel inner = new JPanel(new BorderLayout(6,0));
+            inner.setOpaque(false);
+            inner.add(txt, BorderLayout.CENTER);
+            inner.add(close, BorderLayout.EAST);
+
+            // Right-click menu for editing weight (ignored for UNAVAILABLE)
+            inner.addMouseListener(new MouseAdapter() {
                 @Override public void mousePressed(MouseEvent e) { maybePopup(e); }
                 @Override public void mouseReleased(MouseEvent e) { maybePopup(e); }
                 private void maybePopup(MouseEvent e) {
                     if (e.isPopupTrigger() || SwingUtilities.isRightMouseButton(e)) {
                         JPopupMenu pm = new JPopupMenu();
-                        JMenuItem edit = new JMenuItem("Editar peso…");
-                        edit.addActionListener(ev -> onEditWeight.accept(it));
+                        if (status != Status.UNAVAILABLE) {
+                            JMenuItem edit = new JMenuItem("Editar peso…");
+                            edit.addActionListener(ev -> onEditWeight.accept(it));
+                            pm.add(edit);
+                        }
                         JMenuItem remove = new JMenuItem("Quitar");
                         remove.addActionListener(ev -> onRemove.accept(it.id));
-                        pm.add(edit); pm.add(remove);
-                        pm.show(finalChip, e.getX(), e.getY());
+                        pm.add(remove);
+                        pm.show(inner, e.getX(), e.getY());
                     }
                 }
             });
 
-            // paint rounded background
-            chip = wrapRounded(chip, color(status), border(status));
-            return chip;
+            return wrapRounded(inner, color(status), border(status));
         }
 
         private static JComponent wrapRounded(JComponent inner, Color bg, Color br) {
@@ -728,7 +873,7 @@ public class ProfesoresPanel extends JPanel {
             };
         }
 
-        private static class RoundedWrapper extends JComponent {
+        static class RoundedWrapper extends JComponent {
             private final JComponent inner;
             private final Color bg, br;
             RoundedWrapper(JComponent inner, Color bg, Color br){
@@ -771,14 +916,15 @@ public class ProfesoresPanel extends JPanel {
         private String esc(String s){ return s==null?"":s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;"); }
     }
 
-    // Put this inside ProfesoresPanel (e.g., near other small helpers)
     private void setCreatingNew(boolean creating) {
         this.creatingNew = creating;
-        // ID is only editable when creating a brand-new teacher
-        idField.setEditable(creating);
         if (creating) {
             currentTeacherId = null;
+            idField.setText(generateTeacherId()); // always system-generated
         }
     }
 
+    private String generateTeacherId() {
+        return java.util.UUID.randomUUID().toString();
+    }
 }

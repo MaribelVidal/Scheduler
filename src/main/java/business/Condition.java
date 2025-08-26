@@ -108,4 +108,17 @@ public class Condition {
     public String getConditionType() {
         return conditionType;
     }
+
+    public Object getEntity() {
+        switch (conditionType) {
+            case "Subject":
+                return subject;
+            case "TimePeriod":
+                return timePeriod;
+            case "StudentGroup":
+                return studentGroup;
+            default:
+                return null;
+        }
+    }
 }

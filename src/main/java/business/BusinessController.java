@@ -579,27 +579,7 @@ public class BusinessController {
         teachers.removeIf(teacher -> teacher.getId().equals(id));
     }
 
-    public void addTeacherPreferredSubject(String currentTeacherId, String id, int w) {
-        for (Teacher teacher : teachers) {
-            if (teacher.getId().equals(currentTeacherId)) {
-                for (Subject subject : subjects) {
-                    if (subject.getId().equals(id)) {
-                        teacher.addPreferredSubject(subject, w);
-                        return; // Exit after adding the first matching subject
-                    }
-                }
-            }
-        }
-    }
 
-    public void removeTeacherPreferredSubject(String currentTeacherId, String subjectId) {
-        for (Teacher teacher : teachers) {
-            if (teacher.getId().equals(currentTeacherId)) {
-                teacher.getPreferredSubjects().removeIf(subject -> subject.getId().equals(subjectId));
-                return; // Exit after removing the first matching subject
-            }
-        }
-    }
 
     public Map<String, Integer> getTeacherPreferredSubjectWeights(String teacherId) {
         for (Teacher teacher : teachers) {
@@ -647,158 +627,174 @@ public class BusinessController {
         return Map.of();
     }
 
-    public void addTeacherPreferredStudentGroup(String currentTeacherId, String id, int w) {
+
+
+    public List<Subject> getTeacherPossibleSubjects(String teacherId) {
         for (Teacher teacher : teachers) {
-            if (teacher.getId().equals(currentTeacherId)) {
-                for (StudentGroup studentGroup : studentGroups) {
-                    if (studentGroup.getId().equals(id)) {
-                        teacher.addPreferredStudentGroup(studentGroup, w);
-                        return; // Exit after adding the first matching student group
-                    }
-                }
+            if (teacher.getId().equals(teacherId)) {
+                return teacher.getPossibleSubjects();
             }
         }
+        return new ArrayList<>();
     }
 
-    public void addTeacherUnpreferredStudentGroup(String currentTeacherId, String id, int w) {
+    public void addTeacherPossibleSubject(String teacherId, String subjectId) {
+        Teacher t = findTeacherById(teacherId);
+        Subject s = findSubjectById(subjectId);
+        if (t == null || s == null) return;
+        t.addPossibleSubject(s);               // <-- delegate
+    }
+
+    private Subject findSubjectById(String subjectId) {
+        return subjects.stream()
+                .filter(s -> s.getId().equals(subjectId))
+                .findFirst()
+                .orElse(null);
+    }
+
+    public void removeTeacherPossibleSubject(String teacherId, String subjectId) {
+        Teacher t = findTeacherById(teacherId);
+        if (t == null) return;
+        t.removePossibleSubjectById(subjectId); // <-- delegate (no removeIf on immutable!)
+    }
+
+    // ------- Preferred Subjects -------
+    public void addTeacherPreferredSubject(String teacherId, String subjectId, int weight) {
+        Teacher t = findTeacherById(teacherId);
+        Subject s = findSubjectById(subjectId);
+        if (t == null || s == null) return;
+        t.addPreferredSubject(s, weight);       // keep conditions in sync
+    }
+
+    public void removeTeacherPreferredSubject(String teacherId, String subjectId) {
+        Teacher t = findTeacherById(teacherId);
+        if (t == null) return;
+        t.removePreferredSubjectById(subjectId); // removes also the corresponding Condition
+    }
+
+    // ------- Preferred / Unpreferred Groups -------
+    public void addTeacherPreferredStudentGroup(String teacherId, String groupId, int weight) {
+        Teacher t = findTeacherById(teacherId);
+        StudentGroup g = findStudentGroupById(groupId);
+        if (t == null || g == null) return;
+        t.addPreferredStudentGroup(g, weight);
+    }
+
+    private StudentGroup findStudentGroupById(String groupId) {
+        return studentGroups.stream()
+                .filter(g -> g.getId().equals(groupId))
+                .findFirst()
+                .orElse(null);
+    }
+
+    public void removeTeacherPreferredStudentGroup(String teacherId, String groupId) {
+        Teacher t = findTeacherById(teacherId);
+        if (t == null) return;
+        t.removePreferredStudentGroupById(groupId);
+    }
+
+    public void addTeacherUnpreferredStudentGroup(String teacherId, String groupId, int weight) {
+        Teacher t = findTeacherById(teacherId);
+        StudentGroup g = findStudentGroupById(groupId);
+        if (t == null || g == null) return;
+        t.addUnPreferredStudentGroup(g, weight);
+    }
+
+    private Teacher findTeacherById(String teacherId) {
+        return teachers.stream()
+                .filter(t -> t.getId().equals(teacherId))
+                .findFirst()
+                .orElse(null);
+    }
+
+    public void removeTeacherUnpreferredStudentGroup(String teacherId, String groupId) {
+        Teacher t = findTeacherById(teacherId);
+        if (t == null) return;
+        t.removeUnPreferredStudentGroupById(groupId);
+    }
+
+    // ------- Preferred / Unpreferred / Unavailable TimePeriods -------
+    public void addTeacherPreferredTimePeriod(String teacherId, String tpId, int weight) {
+        Teacher t = findTeacherById(teacherId);
+        TimePeriod tp = findTimePeriodById(tpId);
+        if (t == null || tp == null) return;
+        t.addPreferredTimePeriod(tp, weight);
+    }
+
+    private TimePeriod findTimePeriodById(String tpId) {
+        return timePeriods.stream()
+                .filter(tp -> tp.getId().equals(tpId))
+                .findFirst()
+                .orElse(null);
+    }
+
+    public void removeTeacherPreferredTimePeriod(String teacherId, String tpId) {
+        Teacher t = findTeacherById(teacherId);
+        if (t == null) return;
+        t.removePreferredTimePeriodById(tpId);
+    }
+
+    public void addTeacherUnpreferredTimePeriod(String teacherId, String tpId, int weight) {
+        Teacher t = findTeacherById(teacherId);
+        TimePeriod tp = findTimePeriodById(tpId);
+        if (t == null || tp == null) return;
+        t.addUnPreferredTimePeriod(tp, weight);
+    }
+    public void removeTeacherUnpreferredTimePeriod(String teacherId, String tpId) {
+        Teacher t = findTeacherById(teacherId);
+        if (t == null) return;
+        t.removeUnPreferredTimePeriodById(tpId);
+    }
+
+    public void addTeacherUnavailableTimePeriod(String teacherId, String tpId) {
+        Teacher t = findTeacherById(teacherId);
+        TimePeriod tp = findTimePeriodById(tpId);
+        if (t == null || tp == null) return;
+        t.addUnavailableTimePeriod(tp);
+    }
+    public void removeTeacherUnavailableTimePeriod(String teacherId, String tpId) {
+        Teacher t = findTeacherById(teacherId);
+        if (t == null) return;
+        t.removeUnavailableTimePeriodById(tpId);
+    }
+
+    // ------- Weight updates (unchanged if you already call Teacher’s update* methods) -------
+    public void updateTeacherPreferredSubjectWeight(String teacherId, String subjectId, int w) {
+        Teacher t = findTeacherById(teacherId);
+        if (t == null) return;
+        t.updatePreferredSubjectWeight(subjectId, w);
+    }
+    public void updateTeacherPreferredStudentGroupWeight(String teacherId, String groupId, int w) {
+        Teacher t = findTeacherById(teacherId);
+        if (t == null) return;
+        t.updatePreferredStudentGroupWeight(groupId, w);
+    }
+    public void updateTeacherUnpreferredStudentGroupWeight(String teacherId, String groupId, int w) {
+        Teacher t = findTeacherById(teacherId);
+        if (t == null) return;
+        t.updateUnPreferredStudentGroupWeight(groupId, w);
+    }
+    public void updateTeacherPreferredTimePeriodWeight(String teacherId, String tpId, int w) {
+        Teacher t = findTeacherById(teacherId);
+        if (t == null) return;
+        t.updatePreferredTimePeriodWeight(tpId, w);
+    }
+    public void updateTeacherUnpreferredTimePeriodWeight(String teacherId, String tpId, int w) {
+        Teacher t = findTeacherById(teacherId);
+        if (t == null) return;
+        t.updateUnPreferredTimePeriodWeight(tpId, w);
+    }
+
+
+    public void deleteSchedule(String id) {
         for (Teacher teacher : teachers) {
-            if (teacher.getId().equals(currentTeacherId)) {
-                for (StudentGroup studentGroup : studentGroups) {
-                    if (studentGroup.getId().equals(id)) {
-                        teacher.addUnPreferredStudentGroup(studentGroup, w);
-                        return; // Exit after adding the first matching student group
-                    }
-                }
-            }
+            teacher.getSchedules().removeIf(schedule -> schedule.getId().equals(id));
         }
-    }
-
-    public void addTeacherPreferredTimePeriod(String currentTeacherId, String id, int w) {
-        for (Teacher teacher : teachers) {
-            if (teacher.getId().equals(currentTeacherId)) {
-                for (TimePeriod timePeriod : timePeriods) {
-                    if (timePeriod.getId().equals(id)) {
-                        teacher.addPreferredTimePeriod(timePeriod, w);
-                        return; // Exit after adding the first matching time period
-                    }
-                }
-            }
+        for (StudentGroup studentGroup : studentGroups) {
+            studentGroup.getSchedules().removeIf(schedule -> schedule.getId().equals(id));
         }
-    }
-
-    public void addTeacherUnpreferredTimePeriod(String currentTeacherId, String id, int w) {
-        for (Teacher teacher : teachers) {
-            if (teacher.getId().equals(currentTeacherId)) {
-                for (TimePeriod timePeriod : timePeriods) {
-                    if (timePeriod.getId().equals(id)) {
-                        teacher.addUnPreferredTimePeriod(timePeriod, w);
-                        return; // Exit after adding the first matching time period
-                    }
-                }
-            }
-        }
-    }
-
-    public void addTeacherUnavailableTimePeriod(String currentTeacherId, String id) {
-        for (Teacher teacher : teachers) {
-            if (teacher.getId().equals(currentTeacherId)) {
-                for (TimePeriod timePeriod : timePeriods) {
-                    if (timePeriod.getId().equals(id)) {
-                        teacher.addUnavailableTimePeriod(timePeriod);
-                        return; // Exit after adding the first matching time period
-                    }
-                }
-            }
-        }
-    }
-
-    public void removeTeacherPreferredStudentGroup(String currentTeacherId, String groupId) {
-        for (Teacher teacher : teachers) {
-            if (teacher.getId().equals(currentTeacherId)) {
-                teacher.getPreferredStudentGroups().removeIf(studentGroup -> studentGroup.getId().equals(groupId));
-                return; // Exit after removing the first matching student group
-            }
-        }
-    }
-
-    public void removeTeacherUnpreferredStudentGroup(String currentTeacherId, String groupId) {
-        for (Teacher teacher : teachers) {
-            if (teacher.getId().equals(currentTeacherId)) {
-                teacher.getUnPreferredStudentGroups().removeIf(studentGroup -> studentGroup.getId().equals(groupId));
-                return; // Exit after removing the first matching student group
-            }
-        }
-    }
-
-    public void removeTeacherPreferredTimePeriod(String currentTeacherId, String tpId) {
-        for (Teacher teacher : teachers) {
-            if (teacher.getId().equals(currentTeacherId)) {
-                teacher.getPreferredTimePeriods().removeIf(timePeriod -> timePeriod.getId().equals(tpId));
-                return; // Exit after removing the first matching time period
-            }
-        }
-    }
-
-    public void removeTeacherUnpreferredTimePeriod(String currentTeacherId, String tpId) {
-        for (Teacher teacher : teachers) {
-            if (teacher.getId().equals(currentTeacherId)) {
-                teacher.getUnPreferredTimePeriods().removeIf(timePeriod -> timePeriod.getId().equals(tpId));
-                return; // Exit after removing the first matching time period
-            }
-        }
-    }
-
-    public void removeTeacherUnavailableTimePeriod(String currentTeacherId, String tpId) {
-        for (Teacher teacher : teachers) {
-            if (teacher.getId().equals(currentTeacherId)) {
-                teacher.getUnavailableTimePeriods().removeIf(timePeriod -> timePeriod.getId().equals(tpId));
-                return; // Exit after removing the first matching time period
-            }
-        }
-    }
-
-    public void updateTeacherPreferredSubjectWeight(String currentTeacherId, String id, int w) {
-        for (Teacher teacher : teachers) {
-            if (teacher.getId().equals(currentTeacherId)) {
-                teacher.updatePreferredSubjectWeight(id, w);
-                return; // Exit after updating the first matching subject weight
-            }
-        }
-    }
-
-    public void updateTeacherPreferredStudentGroupWeight(String currentTeacherId, String id, int w) {
-        for (Teacher teacher : teachers) {
-            if (teacher.getId().equals(currentTeacherId)) {
-                teacher.updatePreferredStudentGroupWeight(id, w);
-                return; // Exit after updating the first matching student group weight
-            }
-        }
-    }
-
-    public void updateTeacherUnpreferredStudentGroupWeight(String currentTeacherId, String id, int w) {
-        for (Teacher teacher : teachers) {
-            if (teacher.getId().equals(currentTeacherId)) {
-                teacher.updateUnPreferredStudentGroupWeight(id, w);
-                return; // Exit after updating the first matching student group weight
-            }
-        }
-    }
-
-    public void updateTeacherPreferredTimePeriodWeight(String currentTeacherId, String id, int w) {
-        for (Teacher teacher : teachers) {
-            if (teacher.getId().equals(currentTeacherId)) {
-                teacher.updatePreferredTimePeriodWeight(id, w);
-                return; // Exit after updating the first matching time period weight
-            }
-        }
-    }
-
-    public void updateTeacherUnpreferredTimePeriodWeight(String currentTeacherId, String id, int w) {
-        for (Teacher teacher : teachers) {
-            if (teacher.getId().equals(currentTeacherId)) {
-                teacher.updateUnPreferredTimePeriodWeight(id, w);
-                return; // Exit after updating the first matching time period weight
-            }
+        for (Classroom classroom : classrooms) {
+            classroom.getSchedules().removeIf(schedule -> schedule.getId().equals(id));
         }
     }
 }

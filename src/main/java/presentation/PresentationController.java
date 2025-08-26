@@ -264,4 +264,25 @@ public class PresentationController {
     public void updateTeacherUnpreferredTimePeriodWeight(String currentTeacherId, String id, int w) {
         businessController.updateTeacherUnpreferredTimePeriodWeight(currentTeacherId, id, w);
     }
+
+    public List<Subject> getTeacherPossibleSubjects(String teacherId) {
+        return businessController.getTeacherPossibleSubjects(teacherId);
+    }
+
+    public void addTeacherPossibleSubject(String currentTeacherId, String id) {
+        businessController.addTeacherPossibleSubject(currentTeacherId, id);
+
+    }
+
+    public void removeTeacherPossibleSubject(String currentTeacherId, String subjectId) {
+        businessController.removeTeacherPossibleSubject(currentTeacherId, subjectId);
+    }
+
+    public void generateSchedules() {
+        businessController.generateSchedules(true);
+    }
+
+    public void deleteSchedule(String id) {
+        businessController.deleteSchedule(id);
+    }
 }

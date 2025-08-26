@@ -14,7 +14,7 @@ public class DataBaseConnection {
     private static final String URL = "jdbc:mysql://localhost:3306/scheduler_db";
     private static final String USER = "root";  // Change if using another user
     private static final String PASSWORD = "mipassword";
-    private Connection connection;
+    private static Connection connection;
 
 
 
@@ -23,28 +23,22 @@ public class DataBaseConnection {
 
     }
 
-    public static void connect(){
-
-        try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD)) {
-
-            if (conn != null) {
-
-                System.out.println("Connected to MySQL successfully!");
-
-            }
-
-        } catch (SQLException e) {
-
-            e.printStackTrace();
-
+    public static synchronized void connect() throws SQLException {
+        if (connection == null || connection.isClosed()) {
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+            System.out.println("Connected to MySQL successfully!");
         }
-
     }
 
-    public Connection getConnection() throws SQLException {
-        connection = DriverManager.getConnection(URL, USER, PASSWORD);
+    public synchronized Connection getConnection() throws SQLException {
+        if (connection == null || connection.isClosed()) connect();
         return connection;
     }
+
+    public synchronized void close() {
+        if (connection != null) try { connection.close(); } catch (SQLException ignored) {}
+    }
+
 
     public void closeConnection() throws SQLException {
         try {
@@ -89,7 +83,7 @@ public class DataBaseConnection {
                     + "    FOREIGN KEY (subjectId) REFERENCES subjects(id)\n"
                     + ");";
 
-            try (Statement stmt = connection.createStatement()) {
+            try (Statement stmt = getConnection().createStatement()) {
                 stmt.executeUpdate(createTableSQL);
                 System.out.println("Tabla TeacherPossibleSubjects creada correctamente");
             } catch(SQLException e) {
@@ -145,7 +139,7 @@ public class DataBaseConnection {
 
             + ");";
 
-    try (Statement stmt = connection.createStatement()) {
+    try (Statement stmt = getConnection().createStatement()) {
         stmt.executeUpdate(createTableSQL);
         System.out.println("Tabla teacherAssignedSchedules creada correctamente");
     } catch(SQLException e) {
@@ -162,7 +156,7 @@ public class DataBaseConnection {
                 + "    FOREIGN KEY (conditionId) REFERENCES conditions(id)\n"
                 + ");";
 
-        try (Statement stmt = connection.createStatement()) {
+        try (Statement stmt = getConnection().createStatement()) {
             stmt.executeUpdate(createTableSQL);
             System.out.println("Tabla teacherPreferredConditions creada correctamente");
         } catch(SQLException e) {
@@ -179,7 +173,7 @@ public class DataBaseConnection {
                 + "    FOREIGN KEY (conditionId) REFERENCES conditions(id)\n"
                 + ");";
 
-        try (Statement stmt = connection.createStatement()) {
+        try (Statement stmt = getConnection().createStatement()) {
             stmt.executeUpdate(createTableSQL);
             System.out.println("Tabla teacherUnpreferredConditions creada correctamente");
         } catch(SQLException e) {
@@ -196,7 +190,7 @@ public class DataBaseConnection {
                 + "    FOREIGN KEY (timePeriodId) REFERENCES timePeriods(id)\n"
                 + ");";
 
-        try (Statement stmt = connection.createStatement()) {
+        try (Statement stmt = getConnection().createStatement()) {
             stmt.executeUpdate(createTableSQL);
             System.out.println("Tabla teacherUnavailableTimePeriods creada correctamente");
         } catch(SQLException e) {
@@ -273,7 +267,7 @@ public class DataBaseConnection {
                 + "    FOREIGN KEY (subjectId) REFERENCES subjects(id)\n"
                 + ");";
 
-        try (Statement stmt = connection.createStatement()) {
+        try (Statement stmt = getConnection().createStatement()) {
             stmt.executeUpdate(createTableSQL);
             System.out.println("Tabla classroomAssignedSubjects creada correctamente");
         } catch(SQLException e) {
@@ -290,7 +284,7 @@ public class DataBaseConnection {
                 + "    FOREIGN KEY (scheduleId) REFERENCES schedules(id)\n"
                 + ");";
 
-        try (Statement stmt = connection.createStatement()) {
+        try (Statement stmt = getConnection().createStatement()) {
             stmt.executeUpdate(createTableSQL);
             System.out.println("Tabla classroomAssignedSchedules creada correctamente");
         } catch(SQLException e) {
@@ -344,7 +338,7 @@ public class DataBaseConnection {
                 + ");";
 
         try (
-                Statement stmt = connection.createStatement()
+                Statement stmt = getConnection().createStatement()
         ) {
             stmt.executeUpdate(createTableSQL);
             System.out.println("Hemos creado bien la tabla");
@@ -363,7 +357,7 @@ public class DataBaseConnection {
                     + "    FOREIGN KEY (subjectId) REFERENCES subjects(id)\n"
                     + ");";
 
-            try (Statement stmt = connection.createStatement()) {
+            try (Statement stmt = getConnection().createStatement()) {
                 stmt.executeUpdate(createTableSQL);
                 System.out.println("Tabla studentGroupRequiredSubjects creada correctamente");
             } catch(SQLException e) {
@@ -381,7 +375,7 @@ public class DataBaseConnection {
                     + "    FOREIGN KEY (scheduleId) REFERENCES schedules(id)\n"
                     + ");";
 
-            try (Statement stmt = connection.createStatement()) {
+            try (Statement stmt = getConnection().createStatement()) {
                 stmt.executeUpdate(createTableSQL);
                 System.out.println("Tabla studentGroupAssignedSchedules creada correctamente");
             } catch(SQLException e) {
@@ -400,7 +394,7 @@ public class DataBaseConnection {
                     + ");";
 
             try (
-                    Statement stmt = connection.createStatement()
+                    Statement stmt = getConnection().createStatement()
             ) {
                 stmt.executeUpdate(createTableSQL);
                 System.out.println("Hemos creado bien la tabla");
@@ -419,7 +413,7 @@ public class DataBaseConnection {
                     + "    FOREIGN KEY (lessonId) REFERENCES lessons(id)\n"
                     + ");";
 
-            try (Statement stmt = connection.createStatement()) {
+            try (Statement stmt = getConnection().createStatement()) {
                 stmt.executeUpdate(createTableSQL);
                 System.out.println("Tabla scheduleAssignedLessons creada correctamente");
             } catch(SQLException e) {
@@ -446,7 +440,7 @@ public class DataBaseConnection {
                     + ");";
 
             try (
-                    Statement stmt = connection.createStatement()
+                    Statement stmt = getConnection().createStatement()
             ) {
                 stmt.executeUpdate(createTableSQL);
                 System.out.println("Hemos creado bien la tabla");
@@ -474,7 +468,7 @@ public class DataBaseConnection {
                     + ");";
 
             try (
-                    Statement stmt = connection.createStatement()
+                    Statement stmt = getConnection().createStatement()
             ) {
                 stmt.executeUpdate(createTableSQL);
                 System.out.println("Hemos creado bien la tabla");

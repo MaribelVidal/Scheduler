@@ -559,11 +559,10 @@ public class ScheduleSolver {
     }
 
     private List<Schedule> solveModel() {
-        // ==== TUNE THESE ====
         final int MAX_SOLUTIONS   = 10;   // N best you want to return
-        final int POOL_LIMIT      = 100;  // how many unique candidates to keep before stopping
+        final int POOL_LIMIT      = 30;  // how many unique candidates to keep before stopping
         final int MAX_RESTARTS    = 5;    // how many random restarts
-        final int BEAM_TOLERANCE  = 100;  // allow exploring solutions within (bestScore - tolerance)
+        final int BEAM_TOLERANCE  = 10;  // allow exploring solutions within (bestScore - tolerance)
 
         // Collect candidates here (do NOT attach to entities yet)
         class Candidate {
@@ -670,6 +669,7 @@ public class ScheduleSolver {
 
         // 4) Now attach selected solutions to entities and return the schedules
         List<Schedule> result = new ArrayList<>(top.size());
+        int solNum = 1;
 
         // Optional: clear existing schedules in entities before attaching (depends on your lifecycle)
         //for (Teacher t : teachers) t.setSchedules(new ArrayList<>());
@@ -678,15 +678,30 @@ public class ScheduleSolver {
 
         for (Candidate cand : top) {
             // Attach per-entity schedules
-            for (Map.Entry<Teacher, Schedule> e : cand.tMap.entrySet()) {
-                e.getKey().addSchedule(e.getValue());
+            String id   = java.util.UUID.randomUUID().toString();
+            String name = "Solución " + solNum++ + " (score=" + cand.score + ")";
+
+            cand.schedule.setId(id);
+            cand.schedule.setName(name);
+
+            for (var e : cand.tMap.entrySet()) {
+                e.getValue().setId(id);
+                e.getValue().setName(name);
             }
-            for (Map.Entry<Classroom, Schedule> e : cand.cMap.entrySet()) {
-                e.getKey().addSchedule(e.getValue());
+            for (var e : cand.cMap.entrySet()) {
+                e.getValue().setId(id);
+                e.getValue().setName(name);
             }
-            for (Map.Entry<StudentGroup, Schedule> e : cand.gMap.entrySet()) {
-                e.getKey().addSchedule(e.getValue());
+            for (var e : cand.gMap.entrySet()) {
+                e.getValue().setId(id);
+                e.getValue().setName(name);
             }
+
+            // Attach per-entity schedules to entities
+            for (var e : cand.tMap.entrySet()) e.getKey().addSchedule(e.getValue());
+            for (var e : cand.cMap.entrySet()) e.getKey().addSchedule(e.getValue());
+            for (var e : cand.gMap.entrySet()) e.getKey().addSchedule(e.getValue());
+
             result.add(cand.schedule);
         }
 

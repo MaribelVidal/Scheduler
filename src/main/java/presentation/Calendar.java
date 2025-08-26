@@ -7,6 +7,7 @@ package presentation;
 
 import business.Lesson;
 import business.Schedule;
+import persistence.DAO.LessonDAO;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -359,31 +360,40 @@ public class Calendar extends JFrame {
         Object[][] data = new Object[timeSlots.length][columnNames.length];
 
         // Fill column 0 with labels
-        for (int i = 0; i < timeSlots.length; i++) data[i][0] = timeSlots[i];
+        for (int i = 0; i < timeSlots.length; i++) {
+            data[i][0] = timeSlots[i];
+        }
 
         // Nothing to match? return the header-only table
         if (schedule == null || schedule.getLessons() == null) {
             DefaultTableModel model = createTableModel(data, columnNames);
             return new JScrollPane(createTable(model, columnNames.length));
         }
-
+        List<Lesson> lessons = (schedule == null) ? List.of() : schedule.getLessons();
+        int placed = 0;
         // Populate cells by comparing weekday + start hour
         for (int i = 0; i < timeSlots.length; i++) {
-            int rowHour = parseRowStartHour(timeSlots[i]);   // 9, 10, 11, ...
-            for (int j = 1; j < columnNames.length; j++) {
-                String day = columnNames[j];                 // "Lunes"... "Viernes"
-                Lesson found = null;
-                for (Lesson l : schedule.getLessons()) {
-                    boolean sameDay  = day.equalsIgnoreCase(lessonWeekday(l));
-                    boolean sameHour = rowHour == lessonStartHour(l);
-                    if (sameDay && sameHour) {
-                        // System.out.printf("MATCH: day=%s rowHour=%d -> %s%n", day, rowHour, l.getSubject().getName());
-                        found = l; break;
+            int rowHour = parseRowStartHour(timeSlots[i]);
+            for (int j = 1; j < columnNames.length; j++) {  // j=0 is time
+                int headerIdx = toDayIndex(columnNames[j]);
+
+                Lesson match = null;
+
+                // inside the fill loop, after setting data[i][j]:
+                if (match != null) placed++;
+
+
+                for (Lesson l : lessons) {
+                    if (lessonDayIndex(l) == headerIdx && lessonStartHour(l) == rowHour) {
+                        match = l;
+                        break;
                     }
                 }
-                data[i][j] = (found == null) ? "" : formatCell(found, typeEntity);
+                data[i][j] = (match == null) ? "" : formatCell(match, typeEntity);
+
             }
         }
+        System.out.println("Placed lessons into cells = " + placed);
 
         DefaultTableModel model = createTableModel(data, columnNames);
         return new JScrollPane(createTable(model, columnNames.length));
@@ -616,9 +626,6 @@ public class Calendar extends JFrame {
         return l.getTimePeriod().getWeekday(); // "Lunes", "Martes", ...
     }
 
-    private int lessonStartHour(Lesson l) {
-        return l.getTimePeriod().getInitialHour().getHour(); // 9, 10, 11, ...
-    }
 
     private static String formatRange(java.time.LocalTime s, java.time.LocalTime e) {
         return String.format("%02d:%02d-%02d:%02d", s.getHour(), s.getMinute(), e.getHour(), e.getMinute());
@@ -718,6 +725,52 @@ public class Calendar extends JFrame {
             calendarTitle.setText("Horario");
         }
     }
+
+
+
+
+
+    // ---- helpers (put in Calendar.java) ----
+    private static int toDayIndex(String d) {
+        if (d == null) return -1;
+        d = d.trim().toLowerCase();
+
+        // Spanish
+        if (d.startsWith("lu")) return 1;                 // Lunes
+        if (d.startsWith("ma") && !d.startsWith("mi")) return 2; // Martes
+        if (d.startsWith("mi")) return 3;                 // Miércoles/Miercoles
+        if (d.startsWith("ju")) return 4;                 // Jueves
+        if (d.startsWith("vi")) return 5;                 // Viernes
+
+        // English (defensive)
+        if (d.startsWith("mon")) return 1;
+        if (d.startsWith("tue")) return 2;
+        if (d.startsWith("wed")) return 3;
+        if (d.startsWith("thu")) return 4;
+        if (d.startsWith("fri")) return 5;
+
+        // Numeric (1..5)
+        if (d.matches("\\d")) {
+            int v = Integer.parseInt(d);
+            if (v >= 1 && v <= 5) return v;
+        }
+        return -1;
+    }
+
+    private static int lessonDayIndex(Lesson l) {
+        return toDayIndex(l.getTimePeriod().getWeekDay());
+    }
+
+    private static int lessonStartHour(Lesson l) {           // 9..17 etc.
+        return l.getTimePeriod().getInitialHour().getHour();
+    }
+
+    private static int rowStartHour(String slotLabel) {       // from "09:00-10:00"
+        // assume labels like "09:00-10:00"; adjust if you use a different format
+        int colon = slotLabel.indexOf(':');
+        return colon > 0 ? Integer.parseInt(slotLabel.substring(0, colon)) : -1;
+    }
+
 
 
 }

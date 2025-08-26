@@ -17,17 +17,15 @@ public class LessonDAO implements DAO<Lesson>{
     TimePeriodDAO timePeriodDAO;
 
     public LessonDAO(Connection connection) {
-
         this.connection = connection;
-        this.teacherDAO = new TeacherDAO(connection);
-        this.studentGroupDAO = new StudentGroupDAO(connection);
-        this.subjectDAO = new SubjectDAO(connection);
-        this.classroomDAO = new ClassroomDAO(connection);
-        classroomDAO.setClassroomAssignedSchedulesDAO(new ClassroomAssignedSchedulesDAO(connection, new ScheduleDAO(connection)));
-        classroomDAO.setClassroomAssignedSubjectsDAO(new ClassroomAssignedSubjectsDAO(connection, subjectDAO));
-        this.timePeriodDAO = new TimePeriodDAO(connection);
-
     }
+
+    // setters for wiring after construction
+    public void setTeacherDAO(TeacherDAO dao) { this.teacherDAO = dao; }
+    public void setStudentGroupDAO(StudentGroupDAO dao) { this.studentGroupDAO = dao; }
+    public void setSubjectDAO(SubjectDAO dao) { this.subjectDAO = dao; }
+    public void setClassroomDAO(ClassroomDAO dao) { this.classroomDAO = dao; }
+    public void setTimePeriodDAO(TimePeriodDAO dao) { this.timePeriodDAO = dao; }
 
     @Override
     public void add(Lesson lesson) throws SQLException {

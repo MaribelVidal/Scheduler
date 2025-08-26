@@ -12,13 +12,15 @@ import java.util.List;
 
 public class ScheduleDAO implements DAO<Schedule>{
     private Connection connection;
-    private final ScheduleAssignedLessonsDAO scheduleAssignedLessonsDAO;
+    private ScheduleAssignedLessonsDAO scheduleAssignedLessonsDAO;
 
     public ScheduleDAO(Connection connection) {
-
         this.connection = connection;
-        this.scheduleAssignedLessonsDAO = new ScheduleAssignedLessonsDAO(connection, new LessonDAO(connection));
+    }
 
+    // wire after you have a LessonDAO
+    public void setLessonDAO(LessonDAO lessonDAO) {
+        this.scheduleAssignedLessonsDAO = new ScheduleAssignedLessonsDAO(connection, lessonDAO);
     }
 
     @Override

@@ -93,4 +93,8 @@ public class TimePeriod {
     public void setIdClassroom(String idClassroom) {
         this.idClassroom = idClassroom;
     }
+
+    public String getWeekDay() {
+        return weekday;
+    }
 }

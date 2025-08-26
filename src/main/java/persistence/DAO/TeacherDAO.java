@@ -11,7 +11,7 @@ public class TeacherDAO implements DAO<Teacher>{
     private final TeacherPossibleSubjectsDAO teacherPossibleSubjectsDAO;
     private final TeacherPreferredConditionsDAO teacherPreferredConditionsDAO;
     private final TeacherUnpreferredConditionsDAO teacherUnpreferredConditionsDAO;
-    private final TeacherAssignedSchedulesDAO teacherAssignedSchedulesDAO;
+    private TeacherAssignedSchedulesDAO teacherAssignedSchedulesDAO;
     private final TeacherUnavailableTimePeriodsDAO teacherUnavailableTimePeriodsDAO;
 
 
@@ -20,9 +20,13 @@ public class TeacherDAO implements DAO<Teacher>{
         this.teacherPossibleSubjectsDAO = new TeacherPossibleSubjectsDAO(connection, new SubjectDAO(connection));
         this.teacherPreferredConditionsDAO = new TeacherPreferredConditionsDAO(connection, new ConditionDAO(connection));
         this.teacherUnpreferredConditionsDAO = new TeacherUnpreferredConditionsDAO(connection, new ConditionDAO(connection));
-        this.teacherAssignedSchedulesDAO = new TeacherAssignedSchedulesDAO(connection, new ScheduleDAO(connection));
+        //this.teacherAssignedSchedulesDAO = new TeacherAssignedSchedulesDAO(connection, new ScheduleDAO(connection));
         this.teacherUnavailableTimePeriodsDAO = new TeacherUnavailableTimePeriodsDAO(connection, new TimePeriodDAO(connection));
 
+    }
+
+    public void setScheduleDAO(ScheduleDAO scheduleDAO) {
+        this.teacherAssignedSchedulesDAO = new TeacherAssignedSchedulesDAO(connection, scheduleDAO);
     }
 
     @Override

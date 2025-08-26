@@ -7,26 +7,52 @@ import java.sql.SQLException;
 import java.util.List;
 
 public class PersistenceController {
-    private final DataBaseConnection dataBaseConnection;
+    private  DataBaseConnection dataBaseConnection;
 
-
+    private final TeacherDAO teacherDAO;
+    private final SubjectDAO subjectDAO;
+    private final ClassroomDAO classroomDAO;
+    private final StudentGroupDAO studentGroupDAO;
+    private final TimePeriodDAO timePeriodDAO;
+    private final LessonDAO lessonDAO;
+    private final ScheduleDAO scheduleDAO;
 
 
     public PersistenceController () throws SQLException {
 
         this.dataBaseConnection = new DataBaseConnection();
+        dataBaseConnection.connect();
+        this.dataBaseConnection.createAllTables();
         Connection connection = dataBaseConnection.getConnection();
 
+        this.teacherDAO      = new TeacherDAO(connection);
+        this.subjectDAO      = new SubjectDAO(connection);
+        this.classroomDAO    = new ClassroomDAO(connection);
+        this.studentGroupDAO = new StudentGroupDAO(connection);
+        this.timePeriodDAO   = new TimePeriodDAO(connection);
+        this.lessonDAO       = new LessonDAO(connection);
+        this.scheduleDAO     = new ScheduleDAO(connection);
 
+        lessonDAO.setTeacherDAO(teacherDAO);
+        lessonDAO.setStudentGroupDAO(studentGroupDAO);
+        lessonDAO.setSubjectDAO(subjectDAO);
+        lessonDAO.setClassroomDAO(classroomDAO);
+        lessonDAO.setTimePeriodDAO(timePeriodDAO);
 
+        scheduleDAO.setLessonDAO(lessonDAO);
+        teacherDAO.setScheduleDAO(scheduleDAO);
 
+        classroomDAO.setClassroomAssignedSchedulesDAO(
+                new ClassroomAssignedSchedulesDAO(connection, scheduleDAO));
+        classroomDAO.setClassroomAssignedSubjectsDAO(
+                new ClassroomAssignedSubjectsDAO(connection, subjectDAO));
     }
 
-    public void connect (){
+    public void connect () throws SQLException {
         DataBaseConnection.connect();
     }
 
-    public void initialize (){
+    public void initialize () throws SQLException {
 
         DataBaseConnection.connect();
         dataBaseConnection.createAllTables();

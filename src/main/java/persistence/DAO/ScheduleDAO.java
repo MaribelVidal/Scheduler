@@ -31,12 +31,12 @@ public class ScheduleDAO implements DAO<Schedule>{
             preparedStatement.setString(2, schedule.getName());
             preparedStatement.setInt(3,schedule.getAchievedConditions());
             preparedStatement.setInt(4,schedule.getWeightedConditions());
-
+            preparedStatement.executeUpdate();
             for(Lesson lesson : schedule.getLessons()){
                 scheduleAssignedLessonsDAO.addAssignedLessons(schedule.getId(), lesson.getId());
 
             }
-            preparedStatement.executeUpdate();
+
         }
     }
 
@@ -51,6 +51,10 @@ public class ScheduleDAO implements DAO<Schedule>{
             preparedStatement.setString(1, schedule.getId());
 
             preparedStatement.executeUpdate();
+            for(Lesson lesson : schedule.getLessons()){
+                scheduleAssignedLessonsDAO.addAssignedLessons(schedule.getId(), lesson.getId());
+
+            }
         }
     }
 

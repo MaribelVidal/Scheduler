@@ -54,7 +54,7 @@ public class TeacherUnpreferredConditionsDAO {
 
             while (resultset.next()) {
                 String id = resultset.getString("conditionId");
-                Condition condition = conditionDAO.getOne(id);
+                Condition condition = conditionDAO.getOne(id, true);
                 conditions.add(condition);
             }
         }
@@ -72,8 +72,12 @@ public class TeacherUnpreferredConditionsDAO {
         }
     }
 
-    public void deleteTeacher (String teacherId) throws SQLException {
+    public void deleteTeacher (String teacherId) throws Exception {
         String query = "DELETE FROM teacherUnpreferredConditions WHERE teacherId = ?";
+        List<Condition> conditions = getAllUnpreferredConditions(teacherId);
+        for(Condition condition : conditions){
+            conditionDAO.delete(condition);
+        }
         try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1, teacherId);
             preparedStatement.executeUpdate();

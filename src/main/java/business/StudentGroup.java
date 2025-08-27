@@ -8,19 +8,19 @@ public class StudentGroup extends Entity{
 
 
     private String course;
-    private Teacher assignedTutor;
     private int weeklyGroupHours; // Número de horas asignadas a este grupo
     private int numberOfStudents;
     private List<Subject> requiredSubjects; // Unidades programadas para este grupo
-    private List<Schedule> schedules; // Horarios asignados a este grupo
+    private List<Schedule> schedules = new ArrayList<>(); // Horarios asignados a este grupo
 
     public StudentGroup(String id, String name, String abbreviation) {
         super(id, name, abbreviation);
-        this.numberOfStudents = 25; // Inicializar a 0 por defecto
+        this.numberOfStudents = 25; // Inicializar a 25 por defecto
     }
 
 
     public List<Schedule> getSchedules() {
+        if (schedules == null) schedules = new ArrayList<>();
         return schedules;
     }
 
@@ -52,13 +52,6 @@ public class StudentGroup extends Entity{
         this.course = course;
     }
 
-    public Teacher getAssignedTutor() {
-        return assignedTutor;
-    }
-
-    public void setAssignedTutor(Teacher assignedTutor) {
-        this.assignedTutor = assignedTutor;
-    }
 
     public int getWeeklyGroupHours() {
         return weeklyGroupHours;

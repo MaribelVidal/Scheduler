@@ -36,7 +36,7 @@ public class ClassroomDAO implements DAO<Classroom>{
             preparedStatement.setString(3,classroom.getAbbreviation());
             preparedStatement.setString(4,classroom.getClassroomType());
             preparedStatement.setInt(5,classroom.getCapacity());
-
+            preparedStatement.executeUpdate();
             for(Subject subject :classroom.getAssignedSubjects()){
                 classroomAssignedSubjectsDAO.addAssignedSubjects(classroom.getId(), subject.getId());
             }
@@ -45,7 +45,7 @@ public class ClassroomDAO implements DAO<Classroom>{
                 classroomAssignedSchedulesDAO.addAssignedSchedules(classroom.getId(), schedule.getId());
             }
 
-            preparedStatement.executeUpdate();
+
         }
 
     }
@@ -61,6 +61,13 @@ public class ClassroomDAO implements DAO<Classroom>{
             preparedStatement.setString(5, classroom.getId());
 
             preparedStatement.executeUpdate();
+            for(Subject subject :classroom.getAssignedSubjects()){
+                classroomAssignedSubjectsDAO.addAssignedSubjects(classroom.getId(), subject.getId());
+            }
+
+            for(Schedule schedule :classroom.getSchedules()){
+                classroomAssignedSchedulesDAO.addAssignedSchedules(classroom.getId(), schedule.getId());
+            }
         }
     }
 
@@ -130,5 +137,24 @@ public class ClassroomDAO implements DAO<Classroom>{
             preparedStatement.executeUpdate();
         }
     }
+
+    public Classroom getOneLight(String id) throws SQLException {
+        String sql = "SELECT id, name, abbreviation, classroomType, capacity FROM classrooms WHERE id=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                Classroom c = new Classroom(
+                        rs.getString("id"),
+                        rs.getString("name"),
+                        rs.getString("abbreviation")
+                );
+                c.setCapacity(rs.getInt("capacity"));
+                // DO NOT load assignedSubjects or schedules here
+                return c;
+            }
+        }
+    }
+
 
 }

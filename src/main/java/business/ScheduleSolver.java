@@ -4,6 +4,7 @@ import org.chocosolver.solver.Model;
 import org.chocosolver.solver.Solution;
 import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.constraints.extension.Tuples;
+import org.chocosolver.solver.exception.ContradictionException;
 import org.chocosolver.solver.search.strategy.Search;
 import org.chocosolver.solver.variables.BoolVar;
 import org.chocosolver.solver.variables.IntVar;
@@ -558,7 +559,212 @@ public class ScheduleSolver {
         }
     }
 
+    private boolean quickFeasibilityCheck() {
+        // groups need ≤ available slots
+        int slots = timePeriods.size();
+        for (StudentGroup g : studentGroups) {
+            int need = g.getRequiredSubjects().stream()
+                    .mapToInt(Subject::getWeeklyAssignedHours).sum();
+            if (need > slots) {
+                System.out.printf("Infeasible: %s needs %d > %d slots%n", g.getName(), need, slots);
+                return false;
+            }
+        }
+        // teacher capacity rough bound (sum of hoursWork ≥ sum of group demand)
+        int totalDemand = studentGroups.stream()
+                .flatMap(g -> g.getRequiredSubjects().stream())
+                .mapToInt(Subject::getWeeklyAssignedHours).sum();
+        int totalTeacherCap = teachers.stream()
+                .mapToInt(Teacher::getHoursWork).sum();
+        if (totalTeacherCap < totalDemand) {
+            System.out.printf("Likely infeasible: teacher capacity %d < demand %d%n", totalTeacherCap, totalDemand);
+            // still continue if you want; or return false to fail fast
+        }
+        return true;
+    }
+
+
+
     private List<Schedule> solveModel() {
+        final int  MAX_SOLUTIONS   = 10;     // how many to return
+        final int  KEEP_FACTOR     = 3;      // keep up to 3x, then trim to top 10
+        final int  TOLERANCE       = 10;      // accept solutions within (bestSeen - TOLERANCE)
+        final int  MAX_RESTARTS    = 6;      // random restarts
+        final int  FAIL_LIMIT      = 50_000; // per-restart fail limit
+        final long TIME_BUDGET_MS  = 10_000;  // total time budget
+
+        long deadline = System.currentTimeMillis() + TIME_BUDGET_MS;
+
+        List<Schedule> result = new ArrayList<>();
+        List<Candidate> pool = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+
+        // Make sure objective exists and grab it
+        IntVar scoreVar = ensureObjectiveVar();
+
+        // Solver setup and baseline feasible
+        Solver solver = model.getSolver();
+        solver.reset();
+        solver.limitTime(Math.max(1000, TIME_BUDGET_MS / 3) + "ms");
+
+        Solution feasible = solver.findSolution();
+        if (feasible == null) {
+            System.out.println("No feasible solution under current hard constraints.");
+            return result;
+        }
+
+        // Snapshot baseline
+        int bestSeen = feasible.getIntVal(scoreVar);
+        Solution snap = new Solution(model); snap.record();
+        addCandidateIfUnique(pool, seen, snap, scoreVar, Integer.MAX_VALUE); // force-accept baseline
+
+        // Variables to randomize
+        IntVar[] allVars = java.util.stream.Stream.concat(
+                java.util.stream.Stream.concat(
+                        java.util.stream.Stream.of(unitTeacherVars),
+                        java.util.stream.Stream.of(unitClassroomVars)
+                ),
+                java.util.stream.Stream.of(unitTimePeriodVars)
+        ).toArray(IntVar[]::new);
+
+        // Randomized restarts within a global time budget
+        int poolCap = MAX_SOLUTIONS * KEEP_FACTOR;
+        for (int r = 0; r < MAX_RESTARTS && System.currentTimeMillis() < deadline; r++) {
+            long remaining = deadline - System.currentTimeMillis();
+            if (remaining <= 0) break;
+
+            solver.reset();
+            solver.limitFail(FAIL_LIMIT);
+            solver.limitTime(Math.max(500, remaining) + "ms");
+
+            long seed = System.nanoTime() ^ java.util.concurrent.ThreadLocalRandom.current().nextLong();
+            solver.setSearch(org.chocosolver.solver.search.strategy.Search.randomSearch(allVars, seed));
+
+            while (solver.solve()) {
+                if (System.currentTimeMillis() >= deadline) break;
+
+                int s = scoreVar.getValue();
+                if (s > bestSeen) bestSeen = s;
+
+                // snapshot promising and unique solutions
+                if (s >= bestSeen - TOLERANCE) {
+                    Solution sh = new Solution(model);
+                    sh.record();
+                    addCandidateIfUnique(pool, seen, sh, scoreVar, TOLERANCE);
+                    if (pool.size() >= poolCap) break; // enough for this run
+                }
+            }
+        }
+
+        // If somehow nothing in pool (shouldn't happen), keep baseline
+        if (pool.isEmpty()) addCandidateIfUnique(pool, seen, feasible, scoreVar, Integer.MAX_VALUE);
+
+        // Sort by score desc and trim to MAX_SOLUTIONS
+        pool.sort((a, b) -> Integer.compare(b.score, a.score));
+        if (pool.size() > MAX_SOLUTIONS) pool = pool.subList(0, MAX_SOLUTIONS);
+
+        // Build schedules from snapshots (NO restore)
+        int idx = 1;
+        for (Candidate c : pool) {
+            Schedule sch = buildScheduleFromSolution(c.sol);
+            String id = java.util.UUID.randomUUID().toString();
+            sch.setId(id);
+            sch.setName("Solución " + (idx++) + " (score=" + c.score + ")");
+
+            // If your BusinessController.generateSchedules(false) already attaches schedules
+            // after solveModel() returns, do NOT attach here. Otherwise, uncomment:
+            // attachScheduleToOwners(sch);
+
+            result.add(sch);
+        }
+
+        System.out.println("Selected " + result.size() + " solutions; bestSeen=" + bestSeen);
+        return result;
+    }
+
+    // --- Small helper holder ---
+    private static final class Candidate {
+        final int score; final Solution sol; final String sig;
+        Candidate(int score, Solution sol, String sig) { this.score = score; this.sol = sol; this.sig = sig; }
+    }
+
+    // Add if unique (by signature), using the given tolerance only for informational filtering upstream.
+    private void addCandidateIfUnique(List<Candidate> pool, Set<String> seen, Solution sol, IntVar scoreVar, int tol) {
+        String sig = buildSignatureIgnoringClassrooms(sol);
+        if (seen.add(sig)) {
+            pool.add(new Candidate(sol.getIntVal(scoreVar), sol, sig));
+        }
+    }
+
+
+    // Build a Schedule using values from a Solution snapshot (no variable restoration)
+    private Schedule buildScheduleFromSolution(Solution sol) {
+        Schedule schedule = new Schedule();
+        for (int i = 0; i < numUnits; i++) {
+            int teacherIdx    = sol.getIntVal(unitTeacherVars[i]);
+            int classroomIdx  = sol.getIntVal(unitClassroomVars[i]);
+            int timePeriodIdx = sol.getIntVal(unitTimePeriodVars[i]);
+
+            Teacher    teacher    = teachers.get(teacherIdx);
+            Classroom  classroom  = classrooms.get(classroomIdx);
+            TimePeriod timePeriod = timePeriods.get(timePeriodIdx);
+            ScheduledUnit unit    = scheduledUnits.get(i);
+
+            schedule.addAssignment(unit, teacher, classroom, timePeriod);
+        }
+        return schedule;
+    }
+
+
+
+    private Schedule buildScheduleFromCurrentAssign() {
+        Schedule schedule = new Schedule();
+        for (int i = 0; i < numUnits; i++) {
+            int teacherIdx    = unitTeacherVars[i].getValue();
+            int classroomIdx  = unitClassroomVars[i].getValue();
+            int timePeriodIdx = unitTimePeriodVars[i].getValue();
+
+            Teacher    teacher    = teachers.get(teacherIdx);
+            Classroom  classroom  = classrooms.get(classroomIdx);
+            TimePeriod timePeriod = timePeriods.get(timePeriodIdx);
+            ScheduledUnit unit    = scheduledUnits.get(i);
+
+            schedule.addAssignment(unit, teacher, classroom, timePeriod);
+        }
+        return schedule;
+    }
+
+    private void attachScheduleToOwners(Schedule s) {
+        if (s == null || s.getLessons() == null) return;
+        java.util.Set<Teacher> ts = new java.util.HashSet<>();
+        java.util.Set<StudentGroup> gs = new java.util.HashSet<>();
+        java.util.Set<Classroom> cs = new java.util.HashSet<>();
+        for (Lesson l : s.getLessons()) {
+            if (l.getTeacher() != null) ts.add(l.getTeacher());
+            if (l.getStudentGroup() != null) gs.add(l.getStudentGroup());
+            if (l.getClassroom() != null) cs.add(l.getClassroom());
+        }
+        for (Teacher t : ts) {
+            if (t.getSchedules() == null) t.setSchedules(new ArrayList<>());
+            if (t.getSchedules().stream().noneMatch(sc -> sc.getId().equals(s.getId()))) t.getSchedules().add(s);
+        }
+        for (StudentGroup g : gs) {
+            if (g.getSchedules() == null) g.setSchedules(new ArrayList<>());
+            if (g.getSchedules().stream().noneMatch(sc -> sc.getId().equals(s.getId()))) g.getSchedules().add(s);
+        }
+        for (Classroom c : cs) {
+            if (c.getSchedules() == null) c.setSchedules(new ArrayList<>());
+            if (c.getSchedules().stream().noneMatch(sc -> sc.getId().equals(s.getId()))) c.getSchedules().add(s);
+        }
+    }
+
+
+    /**
+    private List<Schedule> solveModel() {
+        if (!quickFeasibilityCheck()) {
+            System.out.println("Quick feasibility check failed. Aborting solve.");
+            return new ArrayList<>();
+        }
         final int MAX_SOLUTIONS   = 10;   // N best you want to return
         final int POOL_LIMIT      = 30;  // how many unique candidates to keep before stopping
         final int MAX_RESTARTS    = 5;    // how many random restarts
@@ -591,7 +797,7 @@ public class ScheduleSolver {
         Set<String> seen = new HashSet<>(); // for uniqueness (by signature)
 
         // 1) Find best soft score once
-        IntVar scoreVar = totalScore;
+        IntVar scoreVar = ensureObjectiveVar();
         Solution optimalSolution = model.getSolver().findOptimalSolution(scoreVar, Model.MAXIMIZE);
         if (optimalSolution == null) {
             System.out.println("No optimal solution found.");
@@ -712,18 +918,31 @@ public class ScheduleSolver {
         }
         return result;
     }
+**/
+    private IntVar ensureObjectiveVar() {
+        if (totalScore != null) return totalScore;
+
+        // If you have soft BoolVars + weights, build a weighted sum here.
+        // Fallback: a fixed 0 var still lets findOptimalSolution run.
+        totalScore = model.intVar("totalScore", 0);
+        return totalScore;
+    }
 
     /** Build a uniqueness signature from the current solution that IGNORES classrooms,
      *  so two solutions that only change a classroom are considered the same (encourages diversity).
      */
-    private String buildSignatureIgnoringClassrooms() {
-        // unit-by-unit: teacherIdx + "@" + timeIdx
-        StringBuilder sb = new StringBuilder(numUnits * 6);
+    // Signature that ignores classrooms to promote diversity by teacher/timePeriod per unit & group
+    private String buildSignatureIgnoringClassrooms(Solution sol) {
+        StringBuilder sb = new StringBuilder(numUnits * 8);
         for (int i = 0; i < numUnits; i++) {
-            int teacherIdx    = unitTeacherVars[i].getValue();
-            int timePeriodIdx = unitTimePeriodVars[i].getValue();
-            if (i > 0) sb.append('|');
-            sb.append(teacherIdx).append('@').append(timePeriodIdx);
+            int tIdx  = sol.getIntVal(unitTeacherVars[i]);
+            int tpIdx = sol.getIntVal(unitTimePeriodVars[i]);
+
+            // Tie the unit to its student group to avoid permutations of the same plan
+            StudentGroup g = scheduledUnits.get(i).getStudentGroup();
+            int gIdx = (g == null) ? -1 : studentGroups.indexOf(g);
+
+            sb.append('[').append(gIdx).append(':').append(tIdx).append('@').append(tpIdx).append(']');
         }
         return sb.toString();
     }
@@ -735,7 +954,8 @@ public class ScheduleSolver {
 
 
 
-    public List<Schedule> createSchedule() {
+
+    public List<Schedule> createSchedule() throws ContradictionException {
 
         defineVariables();
         addConstraints();

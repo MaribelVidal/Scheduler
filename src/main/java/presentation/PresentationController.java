@@ -1,6 +1,7 @@
 package presentation;
 
 import business.*;
+import org.chocosolver.solver.exception.ContradictionException;
 
 import java.util.List;
 import java.util.Map;
@@ -21,8 +22,8 @@ public class PresentationController {
         // Constructor logic if needed
     }
 
-    public void test() {
-        businessController.testH();
+    public void test() throws Exception {
+        businessController.seedDemoData(true, true);
     }
 
     public void startCalendar() {
@@ -47,11 +48,11 @@ public class PresentationController {
 
 
     public void addNewTeacher (Teacher teacher) {
-        businessController.addNewTeacher(teacher);
+        businessController.addTeacher(teacher);
     }
 
     public void removeTeacher (String teacherId) {
-        businessController.removeTeacher(teacherId);
+        businessController.deleteTeacher(teacherId);
     }
 
     public void addNewClassroom (business.Classroom classroom) {
@@ -144,7 +145,7 @@ public class PresentationController {
         businessController.renameSchedule(id, name);
     }
 
-    public void regenerateSchedules() {
+    public void regenerateSchedules() throws ContradictionException {
         businessController.regenerateSchedules();
     }
 
@@ -278,8 +279,8 @@ public class PresentationController {
         businessController.removeTeacherPossibleSubject(currentTeacherId, subjectId);
     }
 
-    public void generateSchedules() {
-        businessController.generateSchedules(true);
+    public void generateSchedules() throws ContradictionException {
+        businessController.generateSchedules(false);
     }
 
     public void deleteSchedule(String id) {

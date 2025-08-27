@@ -33,7 +33,7 @@ public class Teacher extends Entity {
     private double percentageAchievedConditions;
     private double percentageWeightedConditions;
 
-    private List<Schedule> schedules;
+    private List<Schedule> schedules = new ArrayList<>();
 
     public Teacher(String id, String name, String abbreviation) {
         super(id, name, abbreviation);
@@ -53,7 +53,11 @@ public class Teacher extends Entity {
     }
 
     // ---------------- Schedules ----------------
-    public List<Schedule> getSchedules() { return schedules; }
+    public List<Schedule> getSchedules() {
+        if (schedules == null) schedules = new ArrayList<>();
+        return schedules;
+    }
+
     public void setSchedules(List<Schedule> schedules) { this.schedules = schedules; }
     public void addSchedule(Schedule schedule) {
         if (schedules == null) schedules = new ArrayList<>();

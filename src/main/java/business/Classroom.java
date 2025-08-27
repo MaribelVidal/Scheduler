@@ -9,7 +9,7 @@ public class Classroom extends Entity{
     private String classroomType; //dedicada o general
     private int capacity;
     private List<Subject> assignedSubjects; // Asignaturas asignadas a esta aula
-    private List<Schedule> schedules; // Horarios asignados a esta aula
+    private List<Schedule> schedules = new ArrayList<>(); // Horarios asignados a esta aula
 
     public Classroom(String id, String name, String abbreviation) {
         super(id, name, abbreviation);
@@ -18,6 +18,7 @@ public class Classroom extends Entity{
     }
 
     public List<Schedule> getSchedules() {
+        if (schedules == null) schedules = new ArrayList<>();
         return schedules;
     }
 

@@ -5,120 +5,84 @@ import java.util.UUID;
 public class Condition {
 
     private String id;
-    private String conditionType;
+    private String conditionType; // "None", "Subject", "TimePeriod", "StudentGroup"
     private Teacher teacher;
     private int weight;
 
+    // These are intentionally nullable
     private Subject subject;
     private TimePeriod timePeriod;
     private StudentGroup studentGroup;
-
-    private Subject dummySubject =  new Subject("dummy", "Dummy Subject", "dummy");
-    private TimePeriod dummyTimePeriod = new TimePeriod("dummy", "Monday", null, null);
-    private StudentGroup dummyStudentGroup = new StudentGroup("dummy", "Dummy Group", "dummy");
 
     public Condition(Teacher teacher, int weight) {
         this.id = UUID.randomUUID().toString();
         this.teacher = teacher;
         this.weight = weight;
-        this.subject = dummySubject;
-        this.timePeriod = dummyTimePeriod;
-        this.studentGroup = dummyStudentGroup;
         this.conditionType = "None";
+        this.subject = null;
+        this.timePeriod = null;
+        this.studentGroup = null;
     }
 
-    public Condition (Teacher teacher, int weight, Subject subject) {
+    public Condition(Teacher teacher, int weight, Subject subject) {
         this.id = UUID.randomUUID().toString();
         this.teacher = teacher;
         this.weight = weight;
-        this.subject = subject;
-        this.timePeriod = dummyTimePeriod;
-        this.studentGroup = dummyStudentGroup;
         this.conditionType = "Subject";
-    }
-
-    public Condition (Teacher teacher, int weight, TimePeriod timePeriod) {
-        this.id = UUID.randomUUID().toString();
-        this.teacher = teacher;
-        this.weight = weight;
-        this.subject = dummySubject;
-        this.timePeriod = timePeriod;
-        this.studentGroup = dummyStudentGroup;
-        this.conditionType = "TimePeriod";
-
-    }
-
-    public Condition (Teacher teacher, int weight, StudentGroup studentGroup) {
-        this.id = UUID.randomUUID().toString();
-        this.teacher = teacher;
-        this.weight = weight;
-        this.subject = dummySubject;
-        this.timePeriod = dummyTimePeriod;
-        this.studentGroup = studentGroup    ;
-        this.conditionType = "StudentGroup";
-    }
-
-    public String getId() {
-        return id;
-    }
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public Teacher getTeacher() {
-        return teacher;
-    }
-
-    public void setTeacher(Teacher teacher) {
-        this.teacher = teacher;
-    }
-
-    public int getWeight() {
-        return weight;
-    }
-
-    public void setWeight(int weight) {
-        this.weight = weight;
-    }
-
-    public Subject getSubject() {
-        return subject;
-    }
-
-    public void setSubject(Subject subject) {
         this.subject = subject;
+        this.timePeriod = null;
+        this.studentGroup = null;
     }
 
-    public TimePeriod getTimePeriod() {
-        return timePeriod;
-    }
-
-    public void setTimePeriod(TimePeriod timePeriod) {
+    public Condition(Teacher teacher, int weight, TimePeriod timePeriod) {
+        this.id = UUID.randomUUID().toString();
+        this.teacher = teacher;
+        this.weight = weight;
+        this.conditionType = "TimePeriod";
+        this.subject = null;
         this.timePeriod = timePeriod;
+        this.studentGroup = null;
     }
 
-    public StudentGroup getStudentGroup() {
-        return studentGroup;
-    }
-
-    public void setStudentGroup(StudentGroup studentGroup) {
+    public Condition(Teacher teacher, int weight, StudentGroup studentGroup) {
+        this.id = UUID.randomUUID().toString();
+        this.teacher = teacher;
+        this.weight = weight;
+        this.conditionType = "StudentGroup";
+        this.subject = null;
+        this.timePeriod = null;
         this.studentGroup = studentGroup;
     }
 
-    public String getConditionType() {
-        return conditionType;
-    }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
+    public String getConditionType() { return conditionType; }
+    public void setConditionType(String conditionType) { this.conditionType = conditionType; }
+
+    public Teacher getTeacher() { return teacher; }
+    public void setTeacher(Teacher teacher) { this.teacher = teacher; }
+
+    public int getWeight() { return weight; }
+    public void setWeight(int weight) { this.weight = weight; }
+
+    public Subject getSubject() { return subject; }
+    public void setSubject(Subject subject) { this.subject = subject; }
+
+    public TimePeriod getTimePeriod() { return timePeriod; }
+    public void setTimePeriod(TimePeriod timePeriod) { this.timePeriod = timePeriod; }
+
+    public StudentGroup getStudentGroup() { return studentGroup; }
+    public void setStudentGroup(StudentGroup studentGroup) { this.studentGroup = studentGroup; }
 
     public Object getEntity() {
         switch (conditionType) {
-            case "Subject":
-                return subject;
-            case "TimePeriod":
-                return timePeriod;
-            case "StudentGroup":
-                return studentGroup;
-            default:
-                return null;
+            case "Subject":      return subject;
+            case "TimePeriod":   return timePeriod;
+            case "StudentGroup": return studentGroup;
+            default:             return null;
         }
     }
+
+
 }

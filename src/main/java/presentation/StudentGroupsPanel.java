@@ -162,19 +162,7 @@ public class StudentGroupsPanel extends JPanel {
         spNumAlumnos.setValue(g.getNumberOfStudents());
         txtSubjectsCount.setText(String.valueOf(g.getRequiredSubjects() == null ? 0 : g.getRequiredSubjects().size()));
 
-        // Select tutor in combo
-        Teacher tutor = g.getAssignedTutor();
-        if (tutor != null) {
-            for (int i = 0; i < cbTutor.getItemCount(); i++) {
-                Teacher it = cbTutor.getItemAt(i);
-                if (it != null && tutor.getId().equals(it.getId())) {
-                    cbTutor.setSelectedIndex(i);
-                    break;
-                }
-            }
-        } else if (cbTutor.getItemCount() > 0) {
-            cbTutor.setSelectedIndex(0);
-        }
+
     }
 
     private void saveEdits() {
@@ -187,7 +175,6 @@ public class StudentGroupsPanel extends JPanel {
         g.setAbbreviation(txtAbrev.getText().trim());
         g.setCourse(txtCourse.getText().trim());
         Object tutorSel = cbTutor.getSelectedItem();
-        g.setAssignedTutor(tutorSel instanceof Teacher ? (Teacher) tutorSel : null);
         g.setWeeklyGroupHours((Integer) spHoras.getValue());
         g.setNumberOfStudents((Integer) spNumAlumnos.getValue());
 
@@ -228,7 +215,6 @@ public class StudentGroupsPanel extends JPanel {
         business.StudentGroup g = new business.StudentGroup(java.util.UUID.randomUUID().toString(), nombre, abrev);
         if (curso != null) g.setCourse(curso);
         Object tutorSel = cbTutor.getSelectedItem();
-        g.setAssignedTutor(tutorSel instanceof Teacher ? (Teacher) tutorSel : null);
         g.setWeeklyGroupHours((Integer) spHoras.getModel().getValue());
         g.setNumberOfStudents((Integer) spNumAlumnos.getModel().getValue());
 
@@ -351,10 +337,9 @@ public class StudentGroupsPanel extends JPanel {
                 case 1 -> g.getName();
                 case 2 -> g.getAbbreviation();
                 case 3 -> g.getCourse();
-                case 4 -> (g.getAssignedTutor() == null ? "" : g.getAssignedTutor().getName());
-                case 5 -> g.getWeeklyGroupHours();
-                case 6 -> g.getNumberOfStudents();
-                case 7 -> (g.getRequiredSubjects() == null ? 0 : g.getRequiredSubjects().size());
+                case 4 -> g.getWeeklyGroupHours();
+                case 5 -> g.getNumberOfStudents();
+                case 6 -> (g.getRequiredSubjects() == null ? 0 : g.getRequiredSubjects().size());
                 default -> "";
             };
         }

@@ -156,4 +156,26 @@ public class SubjectDAO implements DAO<Subject> {
         }
 
     }
+
+    // Minimal subject without reverse relations to break cycles
+    public Subject getOneLight(String id) throws SQLException {
+        String sql = "SELECT id, name, abbreviation, department, course, weeklyAssignedHours, duration, maxDailyHours, assignedClassroom FROM subjects WHERE id=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                Subject s = new Subject(
+                        rs.getString("id"),
+                        rs.getString("name"),
+                        rs.getString("abbreviation")
+                );
+                s.setWeeklyAssignedHours(rs.getInt("weeklyAssignedHours"));
+                s.setDuration(rs.getInt("duration"));
+                s.setMaxDailyHours(rs.getInt("maxDailyHours"));
+                // DO NOT fetch assigned classroom here; if you must, set only an ID placeholder or skip
+                return s;
+            }
+        }
+    }
+
 }

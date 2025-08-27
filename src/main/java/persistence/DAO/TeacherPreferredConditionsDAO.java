@@ -2,6 +2,7 @@ package persistence.DAO;
 
 
 import business.Condition;
+import business.Teacher;
 
 
 import java.sql.Connection;
@@ -52,7 +53,7 @@ public class TeacherPreferredConditionsDAO {
 
             while (resultset.next()) {
                 String id = resultset.getString("conditionId");
-                Condition condition = conditionDAO.getOne(id);
+                Condition condition = conditionDAO.getOne(id, true);
                 conditions.add(condition);
             }
         }
@@ -70,13 +71,22 @@ public class TeacherPreferredConditionsDAO {
         }
     }
 
-    public void deleteTeacher (String teacherId) throws SQLException {
+    public void deleteTeacher (String teacherId) throws Exception {
         String query = "DELETE FROM teacherPreferredConditions WHERE teacherId = ?";
+        List<Condition> conditions = getAllPreferredConditions(teacherId);
+        for(Condition condition : conditions){
+            conditionDAO.delete(condition);
+        }
+        for(Condition condition : conditions){
+            conditionDAO.delete(condition);
+        }
         try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1, teacherId);
             preparedStatement.executeUpdate();
         }
     }
+
+
 }
 
 

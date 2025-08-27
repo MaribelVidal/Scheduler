@@ -206,7 +206,7 @@ public class DataBaseConnection {
 
     String createTableSQL = "CREATE TABLE IF NOT EXISTS timePeriods (\n"
             + "	id varchar(50) PRIMARY KEY,\n"
-            + "	weekDay int NOT NULL,\n"
+            + "	weekDay varchar(50) NOT NULL,\n"
             + "	initialHour TIME NOT NULL,\n"
             + "	finalHour TIME NOT NULL,\n"
             + "	idTeacher varchar(50) ,\n"
@@ -330,10 +330,8 @@ public class DataBaseConnection {
                 + "	name varchar(255) NOT NULL,\n"
                 + "	abbreviation varchar(50) NOT NULL,\n"
                 + "	course varchar(255), \n"
-                + "	assignedTutor varchar(50) ,\n"
                 + "	weeklyGroupHours int NOT NULL ,\n"
-                + "	numberOfStudents int NOT NULL,\n"
-                + " FOREIGN KEY (assignedTutor) REFERENCES teachers(id) \n"
+                + "	numberOfStudents int NOT NULL\n"
 
                 + ");";
 
@@ -451,32 +449,29 @@ public class DataBaseConnection {
         }
 
 
-        public void createConditionTable () {
+    public void createConditionTable () {
+        String createTableSQL =
+                "CREATE TABLE IF NOT EXISTS conditions (\n" +
+                        "  id varchar(50) PRIMARY KEY,\n" +
+                        "  teacher varchar(255) NOT NULL,\n" +
+                        "  weight int NOT NULL,\n" +
+                        "  subject varchar(255) NULL,\n" +
+                        "  timePeriod varchar(255) NULL,\n" +
+                        "  studentGroup varchar(255) NULL,\n" +
+                        "  FOREIGN KEY (teacher) REFERENCES teachers(id),\n" +
+                        "  FOREIGN KEY (subject) REFERENCES subjects(id),\n" +
+                        "  FOREIGN KEY (studentGroup) REFERENCES studentGroups(id),\n" +
+                        "  FOREIGN KEY (timePeriod) REFERENCES timePeriods(id)\n" +
+                        ");";
 
-            String createTableSQL = "CREATE TABLE IF NOT EXISTS conditions (\n"
-                    + "	id varchar(50) PRIMARY KEY,\n"
-                    + "	teacher varchar(255) NOT NULL,\n"
-                    + "	weight int NOT NULL,\n"
-                    + "	subject varchar(255) NOT NULL,\n"
-                    + "	timePeriod varchar(255) NOT NULL,\n"
-                    + "	studentGroup varchar(255) NOT NULL,\n"
-                    + " FOREIGN KEY (teacher) REFERENCES teachers(id),\n"
-                    + " FOREIGN KEY (subject) REFERENCES subjects(id),\n"
-                    + " FOREIGN KEY (studentGroup) REFERENCES studentGroups(id),\n"
-                    + " FOREIGN KEY (timePeriod) REFERENCES timePeriods(id)\n"
-
-                    + ");";
-
-            try (
-                    Statement stmt = getConnection().createStatement()
-            ) {
-                stmt.executeUpdate(createTableSQL);
-                System.out.println("Hemos creado bien la tabla");
-
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+        try (Statement stmt = getConnection().createStatement()) {
+            stmt.executeUpdate(createTableSQL);
+            System.out.println("Tabla conditions creada correctamente");
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
+    }
+
 
 
 

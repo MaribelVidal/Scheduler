@@ -412,44 +412,91 @@ public class BusinessController {
             return;
         }
 
-        // Attach each generated schedule to its owners (from lessons)
-        for (Schedule s : generated) {
-            if (s == null || s.getLessons() == null) continue;
+        // For each global schedule, build per-entity projections and attach them.
+        for (Schedule global : generated) {
+            if (global == null || global.getLessons() == null) continue;
 
-            Set<Teacher> ownerTeachers = new HashSet<>();
-            Set<StudentGroup> ownerGroups = new HashSet<>();
-            Set<Classroom> ownerRooms = new HashSet<>();
+            // Ensure the global schedule has an id/name (solver might set them; if not, set here)
+            if (global.getId() == null)   global.setId(java.util.UUID.randomUUID().toString());
+            if (global.getName() == null) global.setName("Solución " + global.getId().substring(0, 8));
 
-            for (Lesson l : s.getLessons()) {
-                if (l.getTeacher() != null) ownerTeachers.add(l.getTeacher());
-                if (l.getStudentGroup() != null) ownerGroups.add(l.getStudentGroup());
-                if (l.getClassroom() != null) ownerRooms.add(l.getClassroom());
+            // Prepare empty schedules per entity (they will share the same id & name)
+            Map<Teacher, Schedule> tMap = new HashMap<>();
+            for (Teacher t : teachers) {
+                Schedule s = new Schedule();
+                s.setId(global.getId());
+                s.setName(global.getName());
+                tMap.put(t, s);
+            }
+            Map<Classroom, Schedule> cMap = new HashMap<>();
+            for (Classroom c : classrooms) {
+                Schedule s = new Schedule();
+                s.setId(global.getId());
+                s.setName(global.getName());
+                cMap.put(c, s);
+            }
+            Map<StudentGroup, Schedule> gMap = new HashMap<>();
+            for (StudentGroup g : studentGroups) {
+                Schedule s = new Schedule();
+                s.setId(global.getId());
+                s.setName(global.getName());
+                gMap.put(g, s);
             }
 
-            for (Teacher t : ownerTeachers) {
-                if (t.getSchedules() == null) t.setSchedules(new ArrayList<>());
-                boolean exists = t.getSchedules().stream().anyMatch(sc -> sc.getId().equals(s.getId()));
-                if (!exists) t.getSchedules().add(s);
+            // Distribute lessons into the right per-entity schedules
+            for (Lesson l : global.getLessons()) {
+                if (l.getTeacher() != null) {
+                    Schedule ts = tMap.get(l.getTeacher());
+                    if (ts != null) ts.addLesson(l);
+                }
+                if (l.getClassroom() != null) {
+                    Schedule cs = cMap.get(l.getClassroom());
+                    if (cs != null) cs.addLesson(l);
+                }
+                if (l.getStudentGroup() != null) {
+                    Schedule gs = gMap.get(l.getStudentGroup());
+                    if (gs != null) gs.addLesson(l);
+                }
             }
-            for (StudentGroup g : ownerGroups) {
-                if (g.getSchedules() == null) g.setSchedules(new ArrayList<>());
-                boolean exists = g.getSchedules().stream().anyMatch(sc -> sc.getId().equals(s.getId()));
-                if (!exists) g.getSchedules().add(s);
+
+            // Attach per-entity schedules to owners (skip empty ones)
+            for (var e : tMap.entrySet()) {
+                Teacher t = e.getKey();
+                Schedule s = e.getValue();
+                if (s.getLessons() != null && !s.getLessons().isEmpty()) {
+                    if (t.getSchedules() == null) t.setSchedules(new ArrayList<>());
+                    boolean exists = t.getSchedules().stream().anyMatch(sc -> global.getId().equals(sc.getId()));
+                    if (!exists) t.getSchedules().add(s);
+                }
             }
-            for (Classroom c : ownerRooms) {
-                if (c.getSchedules() == null) c.setSchedules(new ArrayList<>());
-                boolean exists = c.getSchedules().stream().anyMatch(sc -> sc.getId().equals(s.getId()));
-                if (!exists) c.getSchedules().add(s);
+            for (var e : cMap.entrySet()) {
+                Classroom c = e.getKey();
+                Schedule s = e.getValue();
+                if (s.getLessons() != null && !s.getLessons().isEmpty()) {
+                    if (c.getSchedules() == null) c.setSchedules(new ArrayList<>());
+                    boolean exists = c.getSchedules().stream().anyMatch(sc -> global.getId().equals(sc.getId()));
+                    if (!exists) c.getSchedules().add(s);
+                }
+            }
+            for (var e : gMap.entrySet()) {
+                StudentGroup g = e.getKey();
+                Schedule s = e.getValue();
+                if (s.getLessons() != null && !s.getLessons().isEmpty()) {
+                    if (g.getSchedules() == null) g.setSchedules(new ArrayList<>());
+                    boolean exists = g.getSchedules().stream().anyMatch(sc -> global.getId().equals(sc.getId()));
+                    if (!exists) g.getSchedules().add(s);
+                }
             }
         }
 
         // Persist owners after attaching
         try {
-            if (teachers != null) for (Teacher t : teachers) persistenceController.update(t);
+            if (teachers != null)      for (Teacher t : teachers)      persistenceController.update(t);
             if (studentGroups != null) for (StudentGroup g : studentGroups) persistenceController.update(g);
-            if (classrooms != null) for (Classroom c : classrooms) persistenceController.update(c);
+            if (classrooms != null)    for (Classroom c : classrooms)    persistenceController.update(c);
         } catch (Exception ignore) {}
     }
+
 
     // ========================= Teacher preferences / possible subjects =========================
     // (Delegated to Teacher to avoid immutable list issues)
@@ -791,5 +838,197 @@ public class BusinessController {
     private static String newId() {
         return java.util.UUID.randomUUID().toString();
     }
+
+    // ---- helper DTOs ----
+    public static final class ConditionHit {
+        public final Condition condition;
+        public final Lesson lesson;     // the lesson that satisfied/violated it
+        public ConditionHit(Condition c, Lesson l) { this.condition = c; this.lesson = l; }
+    }
+
+    public static final class ConditionSummary {
+        public final List<ConditionHit> preferredAchieved = new ArrayList<>();
+        public final List<ConditionHit> unpreferredViolated = new ArrayList<>();
+        public int preferredScore = 0;     // sum of weights of achieved preferred
+        public int unpreferredPenalty = 0; // sum of weights (or penalties) of violated unpreferred
+    }
+
+    // ---- public API: per-teacher summary for a given schedule id ----
+    public Map<Teacher, ConditionSummary> summarizeConditionsByTeacher(String scheduleId) {
+        Schedule schedule = findScheduleById(scheduleId);
+        Map<Teacher, ConditionSummary> out = new LinkedHashMap<>();
+        if (schedule == null || schedule.getLessons() == null) return out;
+
+        // Make sure all teachers present in memory have an entry
+        for (Teacher t : teachers) out.put(t, new ConditionSummary());
+
+        for (Lesson l : schedule.getLessons()) {
+            Teacher t = l.getTeacher();
+            if (t == null) continue;
+            ConditionSummary sum = out.computeIfAbsent(t, k -> new ConditionSummary());
+
+            // Preferred achieved?
+            if (t.getPreferredConditions() != null) {
+                for (Condition c : t.getPreferredConditions()) {
+                    if (matches(c, l)) {
+                        sum.preferredAchieved.add(new ConditionHit(c, l));
+                        sum.preferredScore += c.getWeight();
+                    }
+                }
+            }
+            // Unpreferred violated?
+            if (t.getUnPreferredConditions() != null) {
+                for (Condition c : t.getUnPreferredConditions()) {
+                    if (matches(c, l)) {
+                        sum.unpreferredViolated.add(new ConditionHit(c, l));
+                        sum.unpreferredPenalty += c.getWeight();
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    // ---- quick pass-through for UI counts only (optional) ----
+    public Map<Teacher, int[]> summarizeConditionCounts(String scheduleId) {
+        Map<Teacher, ConditionSummary> m = summarizeConditionsByTeacher(scheduleId);
+        Map<Teacher, int[]> out = new LinkedHashMap<>();
+        for (var e : m.entrySet()) {
+            ConditionSummary cs = e.getValue();
+            out.put(e.getKey(), new int[]{ cs.preferredAchieved.size(), cs.unpreferredViolated.size(), cs.preferredScore, cs.unpreferredPenalty });
+        }
+        return out;
+    }
+
+    // ---- helpers ----
+/*
+    private Schedule findScheduleById(String id) {
+        if (id == null) return null;
+        for (Teacher t : teachers) {
+            if (t.getSchedules() != null) {
+                for (Schedule s : t.getSchedules()) if (id.equals(s.getId())) return s;
+            }
+        }
+        for (StudentGroup g : studentGroups) {
+            if (g.getSchedules() != null) {
+                for (Schedule s : g.getSchedules()) if (id.equals(s.getId())) return s;
+            }
+        }
+        for (Classroom c : classrooms) {
+            if (c.getSchedules() != null) {
+                for (Schedule s : c.getSchedules()) if (id.equals(s.getId())) return s;
+            }
+        }
+        return null;
+    }
+*/
+    /*
+    private boolean matches(Condition c, Lesson l) {
+        if (c == null || l == null) return false;
+        String type = c.getConditionType();
+        if ("Subject".equals(type)) {
+            return c.getSubject() != null && l.getSubject() != null &&
+                    Objects.equals(c.getSubject().getId(), l.getSubject().getId());
+        }
+        if ("TimePeriod".equals(type)) {
+            return c.getTimePeriod() != null && l.getTimePeriod() != null &&
+                    Objects.equals(c.getTimePeriod().getId(), l.getTimePeriod().getId());
+        }
+        if ("StudentGroup".equals(type)) {
+            return c.getStudentGroup() != null && l.getStudentGroup() != null &&
+                    Objects.equals(c.getStudentGroup().getId(), l.getStudentGroup().getId());
+        }
+        return false; // "None" or unknown type
+    }
+*/
+    // ===== Detailed condition reporting =====
+    public static final class ConditionCheck {
+        public final Condition condition;
+        public final boolean matched;            // true = achieved (preferred) / violated (unpreferred)
+        public final List<Lesson> witnesses;     // lessons that caused the match
+
+        public ConditionCheck(Condition c, boolean matched, List<Lesson> witnesses) {
+            this.condition = c;
+            this.matched = matched;
+            this.witnesses = witnesses;
+        }
+    }
+
+    public static final class TeacherConditionReport {
+        public final Teacher teacher;
+        public final List<ConditionCheck> preferred = new ArrayList<>();   // achieved + unmet
+        public final List<ConditionCheck> unpreferred = new ArrayList<>(); // violated + respected
+
+        public TeacherConditionReport(Teacher t) { this.teacher = t; }
+    }
+
+    /** Detailed report for ONE teacher on ONE schedule. */
+    public TeacherConditionReport getConditionReportForTeacher(String scheduleId, String teacherId) {
+        Schedule schedule = findScheduleById(scheduleId);
+        Teacher teacher = findTeacherById(teacherId);
+        TeacherConditionReport report = new TeacherConditionReport(teacher);
+
+        if (schedule == null || teacher == null || schedule.getLessons() == null) return report;
+
+        // Collect this teacher's lessons in the schedule
+        List<Lesson> myLessons = new ArrayList<>();
+        for (Lesson l : schedule.getLessons()) {
+            if (l.getTeacher() != null && teacherId.equals(l.getTeacher().getId())) {
+                myLessons.add(l);
+            }
+        }
+
+        // Preferred: achieved (matched) vs unmet (no witness)
+        if (teacher.getPreferredConditions() != null) {
+            for (Condition c : teacher.getPreferredConditions()) {
+                List<Lesson> witnesses = new ArrayList<>();
+                for (Lesson l : myLessons) if (matches(c, l)) witnesses.add(l);
+                report.preferred.add(new ConditionCheck(c, !witnesses.isEmpty(), witnesses));
+            }
+        }
+
+        // Unpreferred: violated (matched) vs respected (no witness)
+        if (teacher.getUnPreferredConditions() != null) {
+            for (Condition c : teacher.getUnPreferredConditions()) {
+                List<Lesson> witnesses = new ArrayList<>();
+                for (Lesson l : myLessons) if (matches(c, l)) witnesses.add(l);
+                report.unpreferred.add(new ConditionCheck(c, !witnesses.isEmpty(), witnesses));
+            }
+        }
+
+        return report;
+    }
+
+    // ---- helpers re-used ----
+    private boolean matches(Condition c, Lesson l) {
+        if (c == null || l == null) return false;
+        String type = c.getConditionType();
+        if ("Subject".equals(type)) {
+            return c.getSubject() != null && l.getSubject() != null &&
+                    Objects.equals(c.getSubject().getId(), l.getSubject().getId());
+        }
+        if ("TimePeriod".equals(type)) {
+            return c.getTimePeriod() != null && l.getTimePeriod() != null &&
+                    Objects.equals(c.getTimePeriod().getId(), l.getTimePeriod().getId());
+        }
+        if ("StudentGroup".equals(type)) {
+            return c.getStudentGroup() != null && l.getStudentGroup() != null &&
+                    Objects.equals(c.getStudentGroup().getId(), l.getStudentGroup().getId());
+        }
+        return false; // "None" or unknown
+    }
+
+    // existing helper from before (or keep this here)
+    private Schedule findScheduleById(String id) {
+        if (id == null) return null;
+        if (teachers != null) for (Teacher t : teachers)
+            if (t.getSchedules()!=null) for (Schedule s : t.getSchedules()) if (id.equals(s.getId())) return s;
+        if (studentGroups != null) for (StudentGroup g : studentGroups)
+            if (g.getSchedules()!=null) for (Schedule s : g.getSchedules()) if (id.equals(s.getId())) return s;
+        if (classrooms != null) for (Classroom c : classrooms)
+            if (c.getSchedules()!=null) for (Schedule s : c.getSchedules()) if (id.equals(s.getId())) return s;
+        return null;
+    }
+
 
 }

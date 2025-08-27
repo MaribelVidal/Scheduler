@@ -152,4 +152,11 @@ public class Schedule {
     public String getName() {
         return name;
     }
+
+    public void addLesson(Lesson l) {
+        if (this.lessons == null) {
+            this.lessons = new ArrayList<>();
+        }
+        this.lessons.add(l);
+    }
 }

@@ -286,4 +286,17 @@ public class PresentationController {
     public void deleteSchedule(String id) {
         businessController.deleteSchedule(id);
     }
+
+    public Map<Teacher, BusinessController.ConditionSummary> getConditionSummaryByTeacher(String scheduleId) {
+        return businessController.summarizeConditionsByTeacher(scheduleId);
+    }
+    public Map<Teacher, int[]> getConditionCounts(String scheduleId) {
+        return businessController.summarizeConditionCounts(scheduleId);
+    }
+
+    public BusinessController.TeacherConditionReport getConditionReportForTeacher(String scheduleId, String teacherId) {
+        return businessController.getConditionReportForTeacher(scheduleId, teacherId);
+    }
+
+
 }

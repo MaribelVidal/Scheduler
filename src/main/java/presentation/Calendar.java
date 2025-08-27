@@ -1,7 +1,9 @@
 package presentation;
 
+import business.Condition;
 import business.Lesson;
 import business.Schedule;
+import business.Teacher;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -116,6 +118,16 @@ public class Calendar extends JFrame {
         JButton regenReplaceBtn = new JButton("Regenerar (reemplaza)");
         regenReplaceBtn.addActionListener(e -> regenerateReplaceSchedules());
         selectors.add(regenReplaceBtn);
+
+        // --- ÚNICO botón: Condiciones ---
+        JButton condBtn = new JButton("Condiciones…");
+        condBtn.addActionListener(e -> showConditionsDialog());
+        selectors.add(condBtn);
+
+        JButton condDetailsBtn = new JButton("Condiciones (detalles)...");
+        condDetailsBtn.addActionListener(e -> showTeacherConditionDetails());
+        selectors.add(condDetailsBtn);
+
 
         // Renombrar sigue igual
         JButton renameBtn = new JButton("Renombrar...");
@@ -349,15 +361,25 @@ public class Calendar extends JFrame {
                 int headerIdx = toDayIndex(columnNames[j]);
                 Lesson match = null;
                 for (Lesson l : lessons) {
-                    if (lessonDayIndex(l) == headerIdx && lessonStartHour(l) == rowHour) {
-                        match = l;
-                        break;
-                    }
+                    boolean dayHour =
+                            lessonDayIndex(l) == headerIdx &&
+                                    lessonStartHour(l) == rowHour;
+
+                    if (!dayHour) continue;
+
+                    boolean ok = switch (typeEntity) {
+                        case "Profesor" -> (l.getTeacher() != null && l.getTeacher().getId().equals(idEntity));
+                        case "Clase" -> (l.getClassroom() != null && l.getClassroom().getId().equals(idEntity));
+                        case "Grupo de Alumnos" -> (l.getStudentGroup() != null && l.getStudentGroup().getId().equals(idEntity));
+                        default -> false;
+                    };
+
+                    if (ok) { match = l; break; }
                 }
-                if (match != null) placed++;
                 data[i][j] = (match == null) ? "" : formatCell(match, typeEntity);
             }
         }
+
         System.out.println("Placed lessons into cells = " + placed);
 
         DefaultTableModel model = createTableModel(data, columnNames);
@@ -397,16 +419,16 @@ public class Calendar extends JFrame {
     private String formatCell(business.Lesson lesson, String typeEntity) {
         if ("Clase".equals(typeEntity)) {
             return lesson.getSubject().getName() + " — " +
-                    lesson.getTeacher().getId() + " — " +
-                    lesson.getStudentGroup().getId();
+                    lesson.getTeacher().getName() + " — " +
+                    lesson.getStudentGroup().getName();
         } else if ("Profesor".equals(typeEntity)) {
             return lesson.getSubject().getName() + " — " +
-                    lesson.getStudentGroup().getId() + " — " +
-                    lesson.getClassroom().getId();
+                    lesson.getStudentGroup().getName() + " — " +
+                    lesson.getClassroom().getName();
         } else {
             return lesson.getSubject().getName() + " — " +
-                    lesson.getTeacher().getId() + " — " +
-                    lesson.getClassroom().getId();
+                    lesson.getTeacher().getName() + " — " +
+                    lesson.getClassroom().getName();
         }
     }
 
@@ -623,4 +645,131 @@ public class Calendar extends JFrame {
         for (var en : ranges.entrySet()) out.add(formatRange(en.getKey(), en.getValue()));
         return out;
     }
+
+    private void showConditionsDialog() {
+        ComboItem sel = (ComboItem) scheduleCombo.getSelectedItem();
+        if (sel == null) {
+            JOptionPane.showMessageDialog(this, "No hay un horario seleccionado.", "Condiciones", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        String schedId = sel.id;
+
+        var summary = presentationControler.getConditionCounts(schedId);
+        if (summary == null || summary.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Sin datos de condiciones para este horario.", "Condiciones", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        String[] cols = { "Profesor", "Pref. cumplidas (#)", "No pref. violadas (#)", "Puntuación pref.", "Penalización no pref." };
+        Object[][] rows = new Object[summary.size()][cols.length];
+        int r = 0;
+        for (var e : summary.entrySet()) {
+            Teacher t = e.getKey();
+            int[] v = e.getValue(); // [countPref, countUnpref, sumPref, sumUnpref]
+            rows[r][0] = t.getName();
+            rows[r][1] = v[0];
+            rows[r][2] = v[1];
+            rows[r][3] = v[2];
+            rows[r][4] = v[3];
+            r++;
+        }
+
+        JTable table = new JTable(new DefaultTableModel(rows, cols) {
+            @Override public boolean isCellEditable(int row, int column) { return false; }
+        });
+        table.getTableHeader().setReorderingAllowed(false);
+
+        JScrollPane sp = new JScrollPane(table);
+        sp.setPreferredSize(new Dimension(600, 300));
+        JOptionPane.showMessageDialog(this, sp, "Condiciones por profesor", JOptionPane.PLAIN_MESSAGE);
+    }
+
+    private void showTeacherConditionDetails() {
+        ComboItem sched = (ComboItem) scheduleCombo.getSelectedItem();
+        ComboItem teacher = (ComboItem) nameCombo.getSelectedItem();
+
+        if (sched == null) {
+            JOptionPane.showMessageDialog(this, "Selecciona un horario.", "Condiciones", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (!"Profesor".equals(typeEntity) || teacher == null) {
+            JOptionPane.showMessageDialog(this, "Selecciona la categoría 'Profesores' y un profesor.", "Condiciones", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        var report = presentationControler.getConditionReportForTeacher(sched.id, teacher.id);
+
+        // Build two tables: Preferred (achieved / unmet) and Unpreferred (violated / respected)
+        String[] cols = { "Tipo", "Entidad", "Peso", "Estado", "Lecciones que lo cumplen" };
+
+        Object[][] prefRows = buildRowsForChecks(report.preferred, true);
+        Object[][] unprefRows = buildRowsForChecks(report.unpreferred, false);
+
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.addTab("Preferidas", new JScrollPane(makeTable(prefRows, cols)));
+        tabs.addTab("No preferidas", new JScrollPane(makeTable(unprefRows, cols)));
+
+        tabs.setPreferredSize(new Dimension(800, 350));
+        JOptionPane.showMessageDialog(this, tabs, "Condiciones de " + (teacher.label), JOptionPane.PLAIN_MESSAGE);
+    }
+
+    private JTable makeTable(Object[][] data, String[] cols) {
+        JTable t = new JTable(new DefaultTableModel(data, cols) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        });
+        t.getTableHeader().setReorderingAllowed(false);
+        return t;
+    }
+
+    private Object[][] buildRowsForChecks(java.util.List<business.BusinessController.ConditionCheck> checks, boolean preferred) {
+        Object[][] rows = new Object[checks.size()][5];
+        int i = 0;
+        for (var cc : checks) {
+            Condition c = cc.condition;
+            rows[i][0] = c.getConditionType();
+            rows[i][1] = describeEntity(c);
+            rows[i][2] = c.getWeight();
+            rows[i][3] = preferred
+                    ? (cc.matched ? "Cumplida" : "No cumplida")
+                    : (cc.matched ? "Violada" : "Respetada");
+            rows[i][4] = witnessesToString(cc.witnesses);
+            i++;
+        }
+        return rows;
+    }
+
+    private String describeEntity(Condition c) {
+        switch (c.getConditionType()) {
+            case "Subject":
+                return (c.getSubject() == null) ? "-" : c.getSubject().getName();
+            case "TimePeriod":
+                if (c.getTimePeriod() == null) return "-";
+                var tp = c.getTimePeriod();
+                return tp.getWeekday() + " " + String.format("%02d:%02d-%02d:%02d",
+                        tp.getInitialHour().getHour(), tp.getInitialHour().getMinute(),
+                        tp.getFinalHour().getHour(), tp.getFinalHour().getMinute());
+            case "StudentGroup":
+                return (c.getStudentGroup() == null) ? "-" : c.getStudentGroup().getName();
+            default:
+                return "-";
+        }
+    }
+
+    private String witnessesToString(java.util.List<business.Lesson> lessons) {
+        if (lessons == null || lessons.isEmpty()) return "";
+        java.util.List<String> parts = new java.util.ArrayList<>();
+        for (business.Lesson l : lessons) {
+            String subj = (l.getSubject() == null) ? "-" : l.getSubject().getName();
+            String grp  = (l.getStudentGroup() == null) ? "-" : l.getStudentGroup().getName();
+            String room = (l.getClassroom() == null) ? "-" : l.getClassroom().getName();
+            var tp = l.getTimePeriod();
+            String time = (tp == null) ? "-" : (tp.getWeekday() + " " +
+                    String.format("%02d:%02d-%02d:%02d", tp.getInitialHour().getHour(), tp.getInitialHour().getMinute(),
+                            tp.getFinalHour().getHour(), tp.getFinalHour().getMinute()));
+            parts.add(subj + " / " + grp + " / " + room + " @ " + time);
+        }
+        return String.join(" | ", parts);
+    }
+
+
 }

@@ -3,6 +3,7 @@ package presentation;
 import business.Classroom;
 import business.Subject;
 
+
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.table.AbstractTableModel;
@@ -195,6 +196,7 @@ public class ClassroomsPanel extends JPanel {
         controller.updateClassroom(c);
         model.fireTableRowsUpdated(modelRow, modelRow);
             controller.refreshAllUI();
+        controller.refreshClassrooms();
 }
 
     private void editSubjects() {

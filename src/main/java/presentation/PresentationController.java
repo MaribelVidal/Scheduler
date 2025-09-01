@@ -299,4 +299,7 @@ public class PresentationController {
     }
 
 
+    public void refreshClassrooms() {
+        calendar.refreshClassrooms();
+    }
 }

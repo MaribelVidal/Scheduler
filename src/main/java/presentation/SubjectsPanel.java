@@ -123,17 +123,41 @@ public class SubjectsPanel extends JPanel {
         form.add(comp, gbc);
     }
 
-    private void refreshClassroomsCombo() {
+    public void refreshClassroomsCombo() {
         cbAula.removeAllItems();
+
+        // 1) Insert a 'none' option at index 0
+        cbAula.addItem(null);
+
+        // 2) Add real classrooms
         for (Classroom c : controller.getClassrooms()) cbAula.addItem(c);
+
+        // 3) Renderer: show a friendly label for the null option
         cbAula.setRenderer(new DefaultListCellRenderer() {
-            @Override public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value,
+                                                          int index, boolean isSelected, boolean cellHasFocus) {
                 Component c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                if (value instanceof Classroom) setText(((Classroom) value).getName());
+                if (value == null) {
+                    setText("— sin aula —"); // (no classroom)
+                } else if (value instanceof Classroom) {
+                    setText(((Classroom) value).getName());
+                }
                 return c;
             }
         });
+
+        // 4) Default to 'none'
+        if (cbAula.getItemCount() > 0) cbAula.setSelectedIndex(0);
     }
+
+
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        refreshClassroomsCombo();   // ensure we pull the latest classrooms
+    }
+
 
     private void clearForm() {
         txtId.setText("");
@@ -172,8 +196,10 @@ public class SubjectsPanel extends JPanel {
                     break;
                 }
             }
-        } else if (cbAula.getItemCount() > 0) {
-            cbAula.setSelectedIndex(0);
+        } else {
+            if (cbAula.getItemCount() > 0) {
+                cbAula.setSelectedIndex(0);
+            }
         }
     }
 

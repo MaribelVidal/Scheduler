@@ -10,7 +10,7 @@ public class Main {
         SwingUtilities.invokeLater(() -> {
             try {
                 PresentationController pc = new PresentationController();
-                pc.test();
+                //pc.test();
                 pc.startCalendar();           // builds the UI
                 // make sure the frame becomes visible
                 // (see tweak in B below, or call it here)

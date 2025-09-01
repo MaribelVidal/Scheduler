@@ -175,6 +175,7 @@ public class StudentGroupsPanel extends JPanel {
         g.setAbbreviation(txtAbrev.getText().trim());
         g.setCourse(txtCourse.getText().trim());
         Object tutorSel = cbTutor.getSelectedItem();
+        g.setTutor(tutorSel instanceof Teacher ? (Teacher) tutorSel : null);
         g.setWeeklyGroupHours((Integer) spHoras.getValue());
         g.setNumberOfStudents((Integer) spNumAlumnos.getValue());
 
@@ -215,6 +216,7 @@ public class StudentGroupsPanel extends JPanel {
         business.StudentGroup g = new business.StudentGroup(java.util.UUID.randomUUID().toString(), nombre, abrev);
         if (curso != null) g.setCourse(curso);
         Object tutorSel = cbTutor.getSelectedItem();
+        g.setTutor(tutorSel instanceof Teacher ? (Teacher) tutorSel : null);
         g.setWeeklyGroupHours((Integer) spHoras.getModel().getValue());
         g.setNumberOfStudents((Integer) spNumAlumnos.getModel().getValue());
 
@@ -337,9 +339,10 @@ public class StudentGroupsPanel extends JPanel {
                 case 1 -> g.getName();
                 case 2 -> g.getAbbreviation();
                 case 3 -> g.getCourse();
-                case 4 -> g.getWeeklyGroupHours();
-                case 5 -> g.getNumberOfStudents();
-                case 6 -> (g.getRequiredSubjects() == null ? 0 : g.getRequiredSubjects().size());
+                case 4 -> (g.getTutor() == null ? "" : g.getTutor().getName());
+                case 5 -> g.getWeeklyGroupHours();
+                case 6 -> g.getNumberOfStudents();
+                case 7 -> (g.getRequiredSubjects() == null ? 0 : g.getRequiredSubjects().size());
                 default -> "";
             };
         }

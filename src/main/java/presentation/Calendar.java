@@ -18,6 +18,8 @@ public class Calendar extends JFrame {
     private JComboBox<ComboItem> nameCombo;
     private JLabel calendarTitle;
 
+    SubjectsPanel subjectsPanel;
+
     private JScrollPane calendarScroll;
     private List<String> lastTpNames;
 
@@ -44,6 +46,7 @@ public class Calendar extends JFrame {
     public Calendar(PresentationController presentationController) {
         super("Calendario Semanal");
         this.presentationControler = presentationController;
+        this.subjectsPanel  = new SubjectsPanel(presentationControler);
     }
 
     public void init(List<String> teachersNames, List<String> classroomsNames,
@@ -76,7 +79,7 @@ public class Calendar extends JFrame {
         tabs.addTab("Profesores", new ProfesoresPanel(presentationControler));
         tabs.addTab("Clases", new ClassroomsPanel(presentationControler));
         tabs.addTab("Grupos", new StudentGroupsPanel(presentationControler));
-        tabs.addTab("Asignaturas", new SubjectsPanel(presentationControler));
+        tabs.addTab("Asignaturas", subjectsPanel);
         tabs.addTab("Periodos", new TimePeriodsPanel(presentationControler));
 
         add(tabs);
@@ -477,6 +480,10 @@ public class Calendar extends JFrame {
         table.setDefaultRenderer(Object.class, centerRenderer);
 
         return table;
+    }
+
+    public void refreshClassrooms() {
+        subjectsPanel.refreshClassroomsCombo();
     }
 
     private static final class ComboItem {

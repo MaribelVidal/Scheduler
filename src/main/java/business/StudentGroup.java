@@ -12,6 +12,7 @@ public class StudentGroup extends Entity{
     private int numberOfStudents;
     private List<Subject> requiredSubjects; // Unidades programadas para este grupo
     private List<Schedule> schedules = new ArrayList<>(); // Horarios asignados a este grupo
+    private Teacher tutor;
 
     public StudentGroup(String id, String name, String abbreviation) {
         super(id, name, abbreviation);
@@ -75,5 +76,11 @@ public class StudentGroup extends Entity{
 
     public void addRequiredSubject(Subject subject) {    this.requiredSubjects.add(subject);}
 
+    public void setTutor(Teacher tutor) {
+        this.tutor = tutor;
+    }
 
+    public Teacher getTutor() {
+        return tutor;
+    }
 }

@@ -707,7 +707,7 @@ public class ProfesoresPanel extends JPanel {
 
     /** Simple chips without weight, with Add and Remove actions (for Asignaturas posibles). */
     private static class SimpleChipPanel extends JPanel {
-        private final JPanel flow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 6));
+        private final WrapPanel flow = new WrapPanel();
         private final JButton addBtn = new JButton("Añadir...");
         private Consumer<String> onRemove = id -> {};
         SimpleChipPanel() {
@@ -724,6 +724,8 @@ public class ProfesoresPanel extends JPanel {
             JScrollPane sp = new JScrollPane(flow,
                     ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
                     ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+            sp.setPreferredSize(new Dimension(0, 120));
+            sp.getVerticalScrollBar().setUnitIncrement(16);
             sp.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(new Color(235,235,235)),
                     new EmptyBorder(4,4,4,4)));
@@ -765,7 +767,7 @@ public class ProfesoresPanel extends JPanel {
 
     private static class WeightedChipPanel extends JPanel {
         private final JLabel title;
-        private final JPanel flow;
+        private final WrapPanel flow;
         private final JButton addBtn;
         private final Status status;
 
@@ -785,11 +787,12 @@ public class ProfesoresPanel extends JPanel {
             top.add(addBtn, BorderLayout.EAST);
             add(top, BorderLayout.NORTH);
 
-            flow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 6));
-            flow.setOpaque(false);
+            flow = new WrapPanel();
             JScrollPane sp = new JScrollPane(flow,
                     ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
                     ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+            sp.setPreferredSize(new Dimension(0, 120));
+            sp.getVerticalScrollBar().setUnitIncrement(16);
             sp.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(new Color(235,235,235)),
                     new EmptyBorder(4,4,4,4)));
@@ -927,4 +930,72 @@ public class ProfesoresPanel extends JPanel {
     private String generateTeacherId() {
         return java.util.UUID.randomUUID().toString();
     }
+
+    // --- layout that computes preferred size with wrapping (so scrollbars can appear) ---
+    private static class WrapLayout extends FlowLayout {
+        WrapLayout() { super(); }
+        WrapLayout(int align) { super(align); }
+        WrapLayout(int align, int hgap, int vgap) { super(align, hgap, vgap); }
+
+        @Override public Dimension preferredLayoutSize(Container target) { return layoutSize(target, true); }
+        @Override public Dimension minimumLayoutSize(Container target) {
+            Dimension d = layoutSize(target, false);
+            d.width -= (getHgap() + 1);
+            return d;
+        }
+
+        private Dimension layoutSize(Container target, boolean preferred) {
+            synchronized (target.getTreeLock()) {
+                int targetWidth = target.getWidth();
+                if (targetWidth == 0) {
+                    Container parent = target.getParent();
+                    if (parent != null) targetWidth = parent.getWidth();
+                }
+
+                Insets insets = target.getInsets();
+                int maxWidth = (targetWidth > 0)
+                        ? targetWidth - (insets.left + insets.right + getHgap() * 2)
+                        : Integer.MAX_VALUE;
+
+                int rowWidth = 0, rowHeight = 0;
+                int width = 0, height = 0;
+
+                for (Component m : target.getComponents()) {
+                    if (!m.isVisible()) continue;
+                    Dimension d = preferred ? m.getPreferredSize() : m.getMinimumSize();
+
+                    if (rowWidth + d.width > maxWidth) { // new row
+                        width = Math.max(width, rowWidth);
+                        height += rowHeight + getVgap();
+                        rowWidth = 0;
+                        rowHeight = 0;
+                    }
+                    if (rowWidth != 0) rowWidth += getHgap();
+                    rowWidth += d.width;
+                    rowHeight = Math.max(rowHeight, d.height);
+                }
+
+                width = Math.max(width, rowWidth);
+                height += rowHeight;
+
+                height += getVgap();
+
+                width  += insets.left + insets.right;
+                height += insets.top + insets.bottom;
+                return new Dimension(width, height);
+            }
+        }
+    }
+
+    // --- scrollable panel that uses WrapLayout and wraps at viewport width ---
+    private static class WrapPanel extends JPanel implements Scrollable {
+        WrapPanel() { super(new WrapLayout(FlowLayout.LEFT, 6, 6)); setOpaque(false); setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0)); }
+        @Override public Dimension getPreferredScrollableViewportSize() { return getPreferredSize(); }
+        @Override public int getScrollableUnitIncrement(Rectangle r, int o, int d) { return 24; }
+        @Override public int getScrollableBlockIncrement(Rectangle r, int o, int d) { return Math.max(24, r.height - 24); }
+        @Override public boolean getScrollableTracksViewportWidth() { return true; }  // wrap at viewport width
+        @Override public boolean getScrollableTracksViewportHeight() { return false; } // enable vertical scroll
+    }
+
+
 }

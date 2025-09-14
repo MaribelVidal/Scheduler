@@ -189,7 +189,6 @@ public class StudentGroupsPanel extends JPanel {
         if (viewRow < 0) { JOptionPane.showMessageDialog(this, "Selecciona un grupo."); return; }
         int modelRow = table.convertRowIndexToModel(viewRow);
         StudentGroup g = model.getAt(modelRow);
-
         java.util.List<Subject> all = controller.getSubjects();
         java.util.List<Subject> selected = new java.util.ArrayList<>(
                 g.getRequiredSubjects() == null ? java.util.List.of() : g.getRequiredSubjects());

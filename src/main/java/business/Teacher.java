@@ -286,7 +286,10 @@ public class Teacher extends Entity {
             if (c.getEntity() instanceof TimePeriod tp && tp.getId().equals(id)) { c.setWeight(w); return; }
     }
 
+    //public boolean canTeach(Subject subject) {
+        //return possibleSubjects.contains(subject);
     public boolean canTeach(Subject subject) {
-        return possibleSubjects.contains(subject);
+    return possibleSubjects.stream().anyMatch(s -> Objects.equals(s.getId(),subject.getId()));
+
     }
 }

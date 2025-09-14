@@ -59,6 +59,8 @@ public class StudentGroupDAO implements DAO<StudentGroup> {
             preparedStatement.setString(6, studentGroup.getId());
 
             preparedStatement.executeUpdate();
+
+
             for (Subject subject : studentGroup.getRequiredSubjects()) {
                 studentGroupRequiredSubjectsDAO.addRequiredSubjects(studentGroup.getId(), subject.getId());
 

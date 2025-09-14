@@ -301,6 +301,7 @@ public class ScheduleSolver {
 
         // 5 - Restricciones de horas de asignatura por día y consecutividad
         for (StudentGroup sg : studentGroups) {
+            if (sg.getRequiredSubjects() == null) continue;
             for (Subject subj : sg.getRequiredSubjects()) {
                 // Obtener índices de unidades para esta combinación grupo-asignatura
                 List<Integer> unitIndices = new ArrayList<>();

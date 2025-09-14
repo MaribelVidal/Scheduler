@@ -26,7 +26,6 @@ public class StudentGroupRequiredSubjectsDAO {
         try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1,studentGroupId);
             preparedStatement.setString(2,subjectId);
-
             preparedStatement.executeUpdate();
         }
 

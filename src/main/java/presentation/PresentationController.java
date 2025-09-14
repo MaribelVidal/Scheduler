@@ -2,14 +2,10 @@ package presentation;
 
 import business.*;
 import org.chocosolver.solver.exception.ContradictionException;
-
 import java.util.List;
 import java.util.Map;
 
 public class PresentationController {
-
-
-
 
     private Calendar calendar;
     private BusinessController businessController;
@@ -17,9 +13,6 @@ public class PresentationController {
     public PresentationController() throws Exception {
         this.businessController = new BusinessController();
         this.calendar = new Calendar(this);
-
-
-        // Constructor logic if needed
     }
 
     public void test() throws Exception {
@@ -50,22 +43,18 @@ public class PresentationController {
     public void addNewTeacher (Teacher teacher) {
         businessController.addTeacher(teacher);
     }
-
     public void removeTeacher (String teacherId) {
         businessController.deleteTeacher(teacherId);
     }
-
     public void addNewClassroom (business.Classroom classroom) {
         businessController.addNewClassroom(classroom);
     }
     public void removeClassroom (String classroomId) {
         businessController.removeClassroom(classroomId);
     }
-
     public void addNewStudentGroup (StudentGroup studentGroup) {
         businessController.addNewStudentGroup(studentGroup);
     }
-
     public void removeStudentGroup (String studentGroupId) {
         businessController.removeStudentGroup(studentGroupId);
     }
@@ -92,7 +81,6 @@ public class PresentationController {
     }
 
 
-
     public void registerCalendar(presentation.Calendar calendar) {
         this.calendar = calendar;
     }
@@ -107,27 +95,21 @@ public class PresentationController {
     public void updateClassroom(Classroom c) {
         businessController.updateClassroom(c);
     }
-
     public void updateTeacher(Teacher t) {
         businessController.updateTeacher(t);
     }
-
     public void updateStudentGroup(StudentGroup g) {
         businessController.updateStudentGroup(g);
     }
-
     public void updateSubject(Subject s) {
         businessController.updateSubject(s);
     }
-
     public List<TimePeriod> getTimePeriods() {
         return businessController.getTimePeriods();
     }
-
     public void updateTimePeriod(TimePeriod tp) {
         businessController.updateTimePeriod(tp);
     }
-
     public List<String> getScheduleIds() {
         return businessController.getScheduleIds();
     }
@@ -135,7 +117,6 @@ public class PresentationController {
     public void addTeacher(Teacher t) {
         businessController.addTeacher(t);
     }
-
 
     public List<Schedule> getAllSchedules() {
         return businessController.getAllSchedules();
@@ -152,7 +133,6 @@ public class PresentationController {
     public List<Subject> getTeacherPreferredSubjects(String teacherId) {
         return businessController.getTeacherPreferredSubjects(teacherId);
     }
-
 
     public List<StudentGroup> getTeacherPreferredStudentGroups(String teacherId) {
         return businessController.getTeacherPreferredStudentGroups(teacherId);

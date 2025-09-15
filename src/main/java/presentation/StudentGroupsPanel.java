@@ -154,13 +154,17 @@ public class StudentGroupsPanel extends JPanel {
         int modelRow = table.convertRowIndexToModel(viewRow);
         StudentGroup g = model.getAt(modelRow);
 
+        List<Subject> req = controller.getStudentGroupRequiredSubjects(g.getId());
+        g.setRequiredSubjects(req);
+
         txtId.setText(g.getId());
         txtNombre.setText(g.getName());
         txtAbrev.setText(g.getAbbreviation());
         txtCourse.setText(g.getCourse() == null ? "" : g.getCourse());
         spHoras.setValue(g.getWeeklyGroupHours());
         spNumAlumnos.setValue(g.getNumberOfStudents());
-        txtSubjectsCount.setText(String.valueOf(g.getRequiredSubjects() == null ? 0 : g.getRequiredSubjects().size()));
+        txtSubjectsCount.setText(String.valueOf(
+                g.getRequiredSubjects() == null ? 0 : g.getRequiredSubjects().size()));
 
 
     }
@@ -197,9 +201,21 @@ public class StudentGroupsPanel extends JPanel {
                 this, "Asignaturas requeridas", all, selected, Subject::getName);
 
         if (newSelected != null) {
-            g.setRequiredSubjects(newSelected);
-            controller.updateStudentGroup(g);
-            loadSelectedIntoForm();
+            java.util.Set<String> before = selected.stream().map(Subject::getId).collect(java.util.stream.Collectors.toSet());
+            java.util.Set<String> after  = newSelected.stream().map(Subject::getId).collect(java.util.stream.Collectors.toSet());
+
+            // additions
+            for (Subject s : newSelected) {
+                if (!before.contains(s.getId())) controller.addStudentGroupRequiredSubject(g.getId(), s.getId());
+            }
+            // removals
+            for (Subject s : selected) {
+                if (!after.contains(s.getId())) controller.removeStudentGroupRequiredSubject(g.getId(), s.getId());
+            }
+
+            // Rehydrate + refresh UI
+            g.setRequiredSubjects(controller.getStudentGroupRequiredSubjects(g.getId()));
+            txtSubjectsCount.setText(String.valueOf(g.getRequiredSubjects().size()));
             model.fireTableDataChanged();
             controller.refreshAllUI();
         }

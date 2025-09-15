@@ -120,10 +120,20 @@ public class BusinessController {
         if (teacher == null) return;
         Teacher current = findTeacherById(teacher.getId());
         if (current == null) return;
-        int idx = teachers.indexOf(current);
-        teachers.set(idx, teacher);
-        try { persistenceController.update(teacher); } catch (Exception ignore) {}
+
+        // merge scalar fields only
+        current.setName(teacher.getName());
+        current.setAbbreviation(teacher.getAbbreviation());
+        current.setEmail(teacher.getEmail());
+        current.setPhone(teacher.getPhone());
+        current.setDepartment(teacher.getDepartment());
+        current.setHoursWork(teacher.getHoursWork());
+
+
+
+        try { persistenceController.update(current); } catch (Exception ignore) {}
     }
+
 
     public void deleteTeacher(String id) {
         if (id == null) return;
@@ -164,14 +174,51 @@ public class BusinessController {
         try { persistenceController.add(g); } catch (Exception ignore) {}
     }
 
-    public void updateStudentGroup(StudentGroup g) {
-        if (g == null) return;
-        StudentGroup cur = findStudentGroupById(g.getId());
+    public void updateStudentGroup(StudentGroup incoming) {
+        if (incoming == null) return;
+        StudentGroup cur = findStudentGroupById(incoming.getId());
         if (cur == null) return;
-        int idx = studentGroups.indexOf(cur);
-        studentGroups.set(idx, g);
-        try { persistenceController.update(g); } catch (Exception ignore) {}
+
+        // merge SCALARS only
+        cur.setName(incoming.getName());
+        cur.setAbbreviation(incoming.getAbbreviation());
+        cur.setCourse(incoming.getCourse());
+        cur.setWeeklyGroupHours(incoming.getWeeklyGroupHours());
+        cur.setNumberOfStudents(incoming.getNumberOfStudents());
+        cur.setTutor(incoming.getTutor());
+
+        try { persistenceController.update(cur); } catch (Exception e) { e.printStackTrace(); }
     }
+
+    public List<Subject> getStudentGroupRequiredSubjects(String groupId) {
+        try { return persistenceController.getRequiredSubjects(groupId); }
+        catch (Exception e) { e.printStackTrace(); return List.of(); }
+    }
+
+    public void addStudentGroupRequiredSubject(String groupId, String subjectId) {
+        try {
+            persistenceController.addRequiredSubject(groupId, subjectId);
+            StudentGroup g = findStudentGroupById(groupId);
+            Subject s = findSubjectById(subjectId);
+            if (g != null && s != null) {
+                if (g.getRequiredSubjects() == null) g.setRequiredSubjects(new ArrayList<>());
+                boolean exists = g.getRequiredSubjects().stream().anyMatch(x -> x.getId().equals(subjectId));
+                if (!exists) g.getRequiredSubjects().add(s);
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    public void removeStudentGroupRequiredSubject(String groupId, String subjectId) {
+        try {
+            persistenceController.removeRequiredSubject(groupId, subjectId);
+            StudentGroup g = findStudentGroupById(groupId);
+            if (g != null && g.getRequiredSubjects() != null) {
+                g.getRequiredSubjects().removeIf(s -> subjectId.equals(s.getId()));
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
+
 
     public void removeStudentGroup(String groupId) {
         if (groupId == null) return;
@@ -510,15 +557,25 @@ public class BusinessController {
         Teacher t = findTeacherById(teacherId);
         Subject s = findSubjectById(subjectId);
         if (t == null || s == null) return;
-        t.addPossibleSubject(s);
-        try { persistenceController.update(t); } catch (Exception ignore) {}
+        try {
+            persistenceController.insertTeacherPossibleSubject(teacherId, subjectId); // persist relation, idempotent
+            t.addPossibleSubject(s);                                                  // keep cache in sync
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
+
     public void removeTeacherPossibleSubject(String teacherId, String subjectId) {
         Teacher t = findTeacherById(teacherId);
         if (t == null) return;
-        t.removePossibleSubjectById(subjectId);
-        try { persistenceController.update(t); } catch (Exception ignore) {}
+        try {
+            persistenceController.deleteTeacherPossibleSubject(teacherId, subjectId); // persist relation
+            t.removePossibleSubjectById(subjectId);                                   // keep cache in sync
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
+
 
     // --- Preferred Subjects ---
     public List<Subject> getTeacherPreferredSubjects(String teacherId) {
@@ -837,6 +894,10 @@ public class BusinessController {
 
     private static String newId() {
         return java.util.UUID.randomUUID().toString();
+    }
+
+    public Subject getSubjectById(String id) {
+        return findSubjectById(id);
     }
 
     // ---- helper DTOs ----

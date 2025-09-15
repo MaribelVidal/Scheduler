@@ -1,5 +1,6 @@
 package persistence;
 
+import business.Subject;
 import persistence.DAO.*;
 
 import java.sql.Connection;
@@ -87,5 +88,49 @@ public class PersistenceController {
         DAO<T> dao = DAOFactory.getDAO((Class<T>) t.getClass(), dataBaseConnection.getConnection());
         dao.delete(t);
     }
+
+    // === Possible subjects (teacher ↔ subject) ===
+    public void insertTeacherPossibleSubject(String teacherId, String subjectId) throws SQLException {
+        TeacherPossibleSubjectsDAO d = new TeacherPossibleSubjectsDAO(
+                dataBaseConnection.getConnection(), new SubjectDAO(dataBaseConnection.getConnection()));
+        d.addPossibleSubjects(teacherId, subjectId);
+    }
+
+    public void deleteTeacherPossibleSubject(String teacherId, String subjectId) throws SQLException {
+        TeacherPossibleSubjectsDAO d = new TeacherPossibleSubjectsDAO(
+                dataBaseConnection.getConnection(), new SubjectDAO(dataBaseConnection.getConnection()));
+        d.deletePossibleSubjects(teacherId, subjectId);
+    }
+
+    public List<Subject> getTeacherPossibleSubjects(String teacherId) throws SQLException {
+        TeacherPossibleSubjectsDAO d = new TeacherPossibleSubjectsDAO(
+                dataBaseConnection.getConnection(), new SubjectDAO(dataBaseConnection.getConnection()));
+        return d.getAllPossibleSubjects(teacherId);
+    }
+
+    public Subject getSubject(String subjectId) throws SQLException {
+        return new SubjectDAO(dataBaseConnection.getConnection()).getOne(subjectId);
+    }
+
+    // --- Required subjects (group ↔ subject) ---
+    public List<Subject> getRequiredSubjects(String groupId) throws SQLException {
+        var conn = dataBaseConnection.getConnection();
+        var d = new StudentGroupRequiredSubjectsDAO(conn, new SubjectDAO(conn));
+        return d.getAllRequiredSubjects(groupId);
+    }
+
+    public void addRequiredSubject(String groupId, String subjectId) throws SQLException {
+        var conn = dataBaseConnection.getConnection();
+        var d = new StudentGroupRequiredSubjectsDAO(conn, new SubjectDAO(conn));
+        d.insertIgnore(groupId, subjectId);
+    }
+
+    public void removeRequiredSubject(String groupId, String subjectId) throws SQLException {
+        var conn = dataBaseConnection.getConnection();
+        var d = new StudentGroupRequiredSubjectsDAO(conn, new SubjectDAO(conn));
+        d.delete(groupId, subjectId);
+    }
+
+
 
 }

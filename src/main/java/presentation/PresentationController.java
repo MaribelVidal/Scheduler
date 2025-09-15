@@ -282,4 +282,21 @@ public class PresentationController {
     public void refreshClassrooms() {
         calendar.refreshClassrooms();
     }
+
+
+    public Subject getSubjectById(String id) {
+        return businessController.getSubjectById(id);
+    }
+
+    public List<Subject> getStudentGroupRequiredSubjects(String id) {
+        return businessController.getStudentGroupRequiredSubjects(id);
+    }
+
+    public void addStudentGroupRequiredSubject(String id, String id1) {
+        businessController.addStudentGroupRequiredSubject(id, id1);
+    }
+
+    public void removeStudentGroupRequiredSubject(String id, String id1) {
+        businessController.removeStudentGroupRequiredSubject(id, id1);
+    }
 }

@@ -47,30 +47,19 @@ public class StudentGroupDAO implements DAO<StudentGroup> {
 
     }
 
+
+
     @Override
-    public void update(StudentGroup studentGroup) throws SQLException {
-        String query = "UPDATE studentGroups SET name = ?, abbreviation = ?, course = ?, weeklyGroupHours = ?, numberOfStudents = ? WHERE id = ?";
-        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-            preparedStatement.setString(1, studentGroup.getName());
-            preparedStatement.setString(2, studentGroup.getAbbreviation());
-            preparedStatement.setString(3, studentGroup.getCourse());
-            preparedStatement.setInt(4, studentGroup.getWeeklyGroupHours());
-            preparedStatement.setInt(5, studentGroup.getNumberOfStudents());
-            preparedStatement.setString(6, studentGroup.getId());
-
-            preparedStatement.executeUpdate();
-
-
-            for (Subject subject : studentGroup.getRequiredSubjects()) {
-                studentGroupRequiredSubjectsDAO.addRequiredSubjects(studentGroup.getId(), subject.getId());
-
-            }
-
-            for (Schedule schedule : studentGroup.getSchedules()) {
-                studentGroupAssignedSchedulesDAO.addAssignedSchedules(studentGroup.getId(), schedule.getId());
-
-
-            }
+    public void update(StudentGroup g) throws SQLException {
+        String sql = "UPDATE studentGroups SET name=?, abbreviation=?, course=?, weeklyGroupHours=?, numberOfStudents=? WHERE id=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, g.getName());
+            ps.setString(2, g.getAbbreviation());
+            ps.setString(3, g.getCourse());
+            ps.setInt(4, g.getWeeklyGroupHours());
+            ps.setInt(5, g.getNumberOfStudents());
+            ps.setString(6, g.getId());
+            ps.executeUpdate();
         }
     }
 
@@ -137,10 +126,10 @@ public class StudentGroupDAO implements DAO<StudentGroup> {
     public void delete (StudentGroup studentGroup) throws SQLException {
         String query = "DELETE FROM studentGroups WHERE id = ?";
         studentGroupRequiredSubjectsDAO.deleteStudentGroup(studentGroup.getId());
-            try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-                preparedStatement.setString(1,studentGroup.getId());
-                preparedStatement.executeUpdate();
-            }
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1,studentGroup.getId());
+            preparedStatement.executeUpdate();
+        }
 
     }
 

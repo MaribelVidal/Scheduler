@@ -90,55 +90,29 @@ public class TeacherDAO implements DAO<Teacher>{
     @Override
     public void update(Teacher teacher) throws SQLException {
         String query = "UPDATE teachers SET name = ?, abbreviation = ?, email = ?, phone = ?, hoursWork = ?, department = ? WHERE id = ?";
-        try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1, teacher.getName());
             preparedStatement.setString(2, teacher.getAbbreviation());
-            if(teacher.getEmail() == null || teacher.getEmail().isEmpty()){
-                preparedStatement.setNull(3, Types.VARCHAR);
-            } else {
-                preparedStatement.setString(3,teacher.getEmail());
-            }
 
-            if(teacher.getPhone() == null || teacher.getPhone().isEmpty()){
+            if (teacher.getEmail() == null || teacher.getEmail().isEmpty())
+                preparedStatement.setNull(3, Types.VARCHAR);
+            else
+                preparedStatement.setString(3, teacher.getEmail());
+
+            if (teacher.getPhone() == null || teacher.getPhone().isEmpty())
                 preparedStatement.setNull(4, Types.VARCHAR);
-            } else {
-                preparedStatement.setString(4,teacher.getPhone());
-            }
+            else
+                preparedStatement.setString(4, teacher.getPhone());
 
             preparedStatement.setInt(5, teacher.getHoursWork());
-            if(teacher.getDepartment() == null || teacher.getDepartment().isEmpty()){
+
+            if (teacher.getDepartment() == null || teacher.getDepartment().isEmpty())
                 preparedStatement.setNull(6, Types.VARCHAR);
-            } else {
-                preparedStatement.setString(6,teacher.getDepartment());
-            }
+            else
+                preparedStatement.setString(6, teacher.getDepartment());
 
             preparedStatement.setString(7, teacher.getId());
-
             preparedStatement.executeUpdate();
-
-            for(Subject subject :teacher.getPossibleSubjects()){
-                teacherPossibleSubjectsDAO.updatePossibleSubjects(teacher.getId(), subject.getId());
-
-            }
-
-            for (Condition condition : teacher.getPreferredConditions()) {
-                conditionDAO.add(condition);
-                teacherPreferredConditionsDAO.updatePreferredConditions(teacher.getId(), condition.getId());
-            }
-            for (Condition condition : teacher.getUnPreferredConditions()) {
-                conditionDAO.add(condition);
-                teacherUnpreferredConditionsDAO.updateUnpreferredConditions(teacher.getId(), condition.getId());
-            }
-
-            for (Schedule schedule : teacher.getSchedules()) {
-                teacherAssignedSchedulesDAO.updateAssignedSchedules(teacher.getId(), schedule.getId());
-            }
-            for (TimePeriod timePeriod : teacher.getUnavailableTimePeriods()) {
-                teacherUnavailableTimePeriodsDAO.updateUnavailableTimePeriods(teacher.getId(), timePeriod.getId());
-            }
-
-
-
         }
     }
 

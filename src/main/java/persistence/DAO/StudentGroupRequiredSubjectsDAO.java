@@ -83,6 +83,26 @@ public class StudentGroupRequiredSubjectsDAO {
         }
     }
 
+    public void insertIgnore(String groupId, String subjectId) throws SQLException {
+        String sql = "INSERT INTO studentGroupRequiredSubjects (studentGroupId, subjectId) " +
+                "VALUES (?, ?) ON DUPLICATE KEY UPDATE subjectId = subjectId";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, groupId);
+            ps.setString(2, subjectId);
+            ps.executeUpdate();
+        }
+    }
+
+    public void delete(String groupId, String subjectId) throws SQLException {
+        String sql = "DELETE FROM studentGroupRequiredSubjects WHERE studentGroupId=? AND subjectId=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, groupId);
+            ps.setString(2, subjectId);
+            ps.executeUpdate();
+        }
+    }
+
+
 
 }
 

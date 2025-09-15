@@ -19,16 +19,24 @@ public class TeacherPossibleSubjectsDAO {
 
 
     public void addPossibleSubjects(String teacherId, String subjectId) throws SQLException {
-        String query = "INSERT INTO TeacherPossibleSubjects (teacherId, subjectId) VALUES (?, ?)";
-        try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-            preparedStatement.setString(1,teacherId);
-            preparedStatement.setString(2,subjectId);
-
-
-            preparedStatement.executeUpdate();
+        String sql = "INSERT INTO teacherPossibleSubjects(teacherId, subjectId) VALUES (?, ?) " +
+                "ON DUPLICATE KEY UPDATE subjectId = subjectId";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, teacherId);
+            ps.setString(2, subjectId);
+            ps.executeUpdate();
         }
-
     }
+
+    public void deletePossibleSubjects(String teacherId, String subjectId) throws SQLException {
+        String sql = "DELETE FROM teacherPossibleSubjects WHERE teacherId = ? AND subjectId = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, teacherId);
+            ps.setString(2, subjectId);
+            ps.executeUpdate();
+        }
+    }
+
 
     public void updatePossibleSubjects(String teacherId, String subjectId) throws SQLException {
         String query = "UPDATE teacherPossibleSubjects SET subjectId = ? WHERE teacherId = ?";
@@ -62,17 +70,6 @@ public class TeacherPossibleSubjectsDAO {
 
     }
 
-
-
-    public void deletePossibleSubjects (String teacherId, String subjectId) throws SQLException{
-        String query = "DELETE FROM teacherPossibleSubjects WHERE teacherId = ? AND subjectId = ?";
-        try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-            preparedStatement.setString(1, teacherId );
-            preparedStatement.setString(2, subjectId );
-            preparedStatement.executeUpdate();
-        }
-
-    }
 
     public void deleteTeacher (String teacherId) throws SQLException {
         String query = "DELETE FROM teacherPossibleSubjects WHERE teacherId = ?";

@@ -341,6 +341,7 @@ public class ProfesoresPanel extends JPanel {
                 t.setName(name);
                 t.setAbbreviation(abbr);
                 readOptionalFieldsInto(t);
+                t.setPossibleSubjects(presentationControler.getTeacherPossibleSubjects(t.getId()));
                 presentationControler.updateTeacher(t);
                 teachersList.repaint();
                 populateForm(t); // refresh metrics view, if updated server-side
@@ -445,8 +446,11 @@ public class ProfesoresPanel extends JPanel {
         if (picked.isEmpty()) return;
 
         try {
+            Teacher t = findTeacherById(currentTeacherId);
             for (ItemRef it : picked) {
                 presentationControler.addTeacherPossibleSubject(currentTeacherId, it.id);
+                Subject s = presentationControler.getSubjectById(it.id);
+                if (t != null && s != null) t.addPossibleSubject(s);
             }
             loadTeacherPreferences(currentTeacherId);
         } catch (Exception ex) {
@@ -459,6 +463,8 @@ public class ProfesoresPanel extends JPanel {
         ensureTeacherSelected();
         try {
             presentationControler.removeTeacherPossibleSubject(currentTeacherId, subjectId);
+            Teacher t = findTeacherById(currentTeacherId);
+            if (t != null) t.removePossibleSubjectById(subjectId);
             loadTeacherPreferences(currentTeacherId);
         } catch (Exception ex) {
             ex.printStackTrace();

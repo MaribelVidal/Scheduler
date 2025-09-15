@@ -89,8 +89,11 @@ public class Teacher extends Entity {
         this.possibleSubjects.clear();
         if (list != null) this.possibleSubjects.addAll(list);
     }
-    public void addPossibleSubject(Subject subject){          // helper
-        if (subject != null && !possibleSubjects.contains(subject)) possibleSubjects.add(subject);
+    public void addPossibleSubject(Subject subject) {
+        if (subject == null) return;
+        boolean exists = possibleSubjects.stream()
+                .anyMatch(s -> Objects.equals(s.getId(), subject.getId()));
+        if (!exists) possibleSubjects.add(subject);
     }
     public boolean removePossibleSubjectById(String subjectId){ // NEW
         return possibleSubjects.removeIf(s -> s.getId().equals(subjectId));
@@ -286,10 +289,8 @@ public class Teacher extends Entity {
             if (c.getEntity() instanceof TimePeriod tp && tp.getId().equals(id)) { c.setWeight(w); return; }
     }
 
-    //public boolean canTeach(Subject subject) {
-        //return possibleSubjects.contains(subject);
     public boolean canTeach(Subject subject) {
-    return possibleSubjects.stream().anyMatch(s -> Objects.equals(s.getId(),subject.getId()));
+        return possibleSubjects.stream().anyMatch(s -> Objects.equals(s.getId(),subject.getId()));
 
     }
 }

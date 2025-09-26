@@ -17,6 +17,8 @@ public class BusinessController {
     private List<Subject> subjects;
     private List<Classroom> classrooms;
     private List<TimePeriod> timePeriods;
+    private List<Schedule> schedules;
+
 
     public BusinessController() throws Exception {
         this.persistenceController = new PersistenceController();
@@ -28,6 +30,7 @@ public class BusinessController {
         if (subjects == null) subjects = new ArrayList<>();
         if (classrooms == null) classrooms = new ArrayList<>();
         if (timePeriods == null) timePeriods = new ArrayList<>();
+        if (schedules == null) schedules = new ArrayList<>();
 
     }
 
@@ -332,7 +335,7 @@ public class BusinessController {
     }
 
     /** Unique set of schedules (by ID) aggregated (teachers-first). */
-    public List<Schedule> getAllSchedules() {
+    /**public List<Schedule> getAllSchedules() {
         Map<String, Schedule> map = new LinkedHashMap<>();
         if (teachers != null) {
             for (Teacher t : teachers) {
@@ -356,7 +359,18 @@ public class BusinessController {
             }
         }
         System.out.println("[BC] getAllSchedules size = " + map.size());
-        return new ArrayList<>(map.values());
+        List<Schedule> list = new ArrayList<>(map.values());
+        for (Schedule s : list) {
+            System.out.println("  Schedule id=" + s.getId() + " name=" + s.getName() +
+                    " lessons=" + ((s.getLessons() == null) ? 0 : s.getLessons().size()));
+        }
+        return list;
+
+    }
+     **/
+
+    public List<Schedule> getAllSchedules() {
+        return schedules;
     }
 
     public void renameSchedule(String id, String name) {
@@ -448,6 +462,7 @@ public class BusinessController {
         ScheduleSolver solver = new ScheduleSolver(teachers, classrooms, studentGroups, timePeriods);
         List<Schedule> generated = solver.createSchedule();
         if (generated == null) generated = List.of();
+        schedules = generated; // cache last generated
 
         if (test) {
             for (Schedule s : generated) {
@@ -542,6 +557,7 @@ public class BusinessController {
             if (studentGroups != null) for (StudentGroup g : studentGroups) persistenceController.update(g);
             if (classrooms != null)    for (Classroom c : classrooms)    persistenceController.update(c);
         } catch (Exception ignore) {}
+
     }
 
 

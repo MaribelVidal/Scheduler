@@ -22,6 +22,10 @@ public class StudentGroup extends Entity{
 
     public List<Schedule> getSchedules() {
         if (schedules == null) schedules = new ArrayList<>();
+        for (Schedule schedule : schedules) {
+            System.out.println("Schedule ID: " + schedule.getId() + ", lessons: " + schedule.getLessons().size());
+        }
+        System.out.println("Getting schedules for group " + this.getName() + ": " + schedules.size() + " schedules found.");
         return schedules;
     }
 

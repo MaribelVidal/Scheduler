@@ -289,6 +289,7 @@ public class Calendar extends JFrame {
         DefaultComboBoxModel<ComboItem> m = new DefaultComboBoxModel<>();
         if (all != null) {
             for (Schedule s : all) {
+                System.out.println("Found schedule: " + s.getId() + " / " + s.getName() + s.getLessons().size());
                 m.addElement(new ComboItem(s.getId(), scheduleLabel(s)));
             }
         }
@@ -339,6 +340,7 @@ public class Calendar extends JFrame {
         } else if ("Grupo de Alumnos".equals(typeEntity)) {
             schedule = presentationControler.getStudentGroupSchedule(idEntity, idSchedule);
         }
+        if (schedule != null) System.out.println(schedule.getLessons().size() + " lessons in schedule " + (schedule == null ? "null" : schedule.getId()));
 
         // Prefer provided tpNames; else derive from schedule
         List<String> slotList =
@@ -349,14 +351,14 @@ public class Calendar extends JFrame {
         timeSlots = slotList.toArray(new String[0]);
         data = new Object[timeSlots.length][columnNames.length];
         for (int i = 0; i < timeSlots.length; i++) data[i][0] = timeSlots[i];
-
+        System.out.println("Using " + timeSlots.length + " time slots." + slotList.size());
         if (schedule == null || schedule.getLessons() == null) {
             DefaultTableModel model = createTableModel(data, columnNames);
             return new JScrollPane(createTable(model, columnNames.length));
         }
 
         List<Lesson> lessons = schedule.getLessons();
-        int placed = 0;
+
 
         for (int i = 0; i < timeSlots.length; i++) {
             int rowHour = parseRowStartHour(timeSlots[i]);
@@ -383,7 +385,7 @@ public class Calendar extends JFrame {
             }
         }
 
-        System.out.println("Placed lessons into cells = " + placed);
+
 
         DefaultTableModel model = createTableModel(data, columnNames);
         return new JScrollPane(createTable(model, columnNames.length));
@@ -642,6 +644,15 @@ public class Calendar extends JFrame {
 
     private List<String> deriveTimeSlotsFromSchedule(Schedule schedule) {
         if (schedule == null || schedule.getLessons() == null) return List.of();
+        List<String> slots = new ArrayList<>();
+        for (Lesson l : schedule.getLessons()) {
+            var s = l.getTimePeriod().getInitialHour();
+            var e = l.getTimePeriod().getFinalHour();
+            String r = formatRange(s, e);
+            if (!slots.contains(r)) slots.add(r);
+        }
+        return slots;
+        /*
         TreeMap<java.time.LocalTime, java.time.LocalTime> ranges = new TreeMap<>();
         for (Lesson l : schedule.getLessons()) {
             var s = l.getTimePeriod().getInitialHour();
@@ -649,8 +660,11 @@ public class Calendar extends JFrame {
             ranges.merge(s, e, (oldE, newE) -> newE.isAfter(oldE) ? newE : oldE);
         }
         List<String> out = new ArrayList<>();
+
+
         for (var en : ranges.entrySet()) out.add(formatRange(en.getKey(), en.getValue()));
         return out;
+        */
     }
 
     private void showConditionsDialog() {
